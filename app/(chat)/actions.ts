@@ -74,7 +74,12 @@ export async function updateChatVisibility({
   }
 
   const chat = await getChatById({ id: chatId });
-  if (!chat || chat.userId !== session.user.id) {
+
+  if (!chat) {
+    return;
+  }
+
+  if (chat.userId !== session.user.id) {
     throw new Error("Unauthorized");
   }
 
