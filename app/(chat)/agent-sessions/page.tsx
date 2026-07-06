@@ -1,28 +1,37 @@
-import { Clock, DollarSign, Activity, Hash, Tag, Cpu, Target } from "lucide-react";
-import React from "react";
+"use client";
 
-const DUMMY_SESSIONS = [
-  {
-    goal: "Analyze fiscal report",
-    sessionId: "sess_x192837",
-    profileId: "prof_48x",
-    startedAt: "2026-07-06 10:14",
-    duration: "45s",
-    cost: "$0.01",
-    lastTask: "Format output",
-  },
-  {
-    goal: "Fetch remote entity data",
-    sessionId: "sess_y827364",
-    profileId: "prof_48x",
-    startedAt: "2026-07-06 10:20",
-    duration: "12s",
-    cost: "$0.005",
-    lastTask: "Authenticate",
-  },
-];
+import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
+import { useProfiles } from "@/hooks/use-profiles";
+import { Clock, DollarSign, Activity, Hash, Tag, Cpu, Target, UserIcon } from "lucide-react";
+import React from "react";
+import { Badge } from "@/components/ui/badge";
 
 export default function AgentSessionsPage() {
+  const { allSessions } = useAgentSidebar();
+  const { profiles } = useProfiles();
+
+  // Helper to find profile name of a session
+  const getProfileName = (profileId?: string) => {
+    if (!profileId) return "—";
+    const found = profiles.find((p) => p.id === profileId);
+    return found ? found.name : profileId;
+  };
+
+  // Helper to get formatted last task or current task
+  const getLastTaskLabel = (tasks: Array<{ label: string; status: string }>) => {
+    if (!tasks || tasks.length === 0) return "Initializing";
+    
+    // Find first running task
+    const running = tasks.find((t) => t.status === "running");
+    if (running) return running.label;
+
+    // Else find the last completed task
+    const completed = [...tasks].reverse().find((t) => t.status === "completed");
+    if (completed) return completed.label;
+
+    return tasks[0].label;
+  };
+
   return (
     <div className="flex flex-1 flex-col h-full bg-background/50">
       <div className="flex items-center gap-4 border-b border-border/40 px-6 py-5">
@@ -31,40 +40,85 @@ export default function AgentSessionsPage() {
         </div>
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-foreground">Agent Sessions</h1>
-          <p className="text-sm text-muted-foreground">Monitor your active and past agent executions.</p>
+          <p className="text-sm text-muted-foreground">Monitor and audit logs of your active and past agent executions.</p>
         </div>
       </div>
 
       <div className="flex-1 p-6">
         <div className="rounded-xl border border-border/50 bg-background/50 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-muted/30 text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><Target className="size-4" /> Goal</div></th>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><Tag className="size-4" /> Session ID</div></th>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><Hash className="size-4" /> Profile ID</div></th>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><Clock className="size-4" /> Started At</div></th>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><Activity className="size-4" /> Duration</div></th>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><DollarSign className="size-4" /> Cost</div></th>
-                <th className="px-4 py-3 font-medium"><div className="flex items-center gap-2"><Cpu className="size-4" /> Last Task</div></th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><Target className="size-4 shrink-0" /> Goal</div>
+                </th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><Tag className="size-4 shrink-0" /> Session ID</div>
+                </th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><UserIcon className="size-4 shrink-0" /> Profile ID</div>
+                </th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><Clock className="size-4 shrink-0" /> Started At</div>
+                </th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><Activity className="size-4 shrink-0" /> Duration</div>
+                </th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><DollarSign className="size-4 shrink-0" /> Cost</div>
+                </th>
+                <th className="px-5 py-3.5 font-medium">
+                  <div className="flex items-center gap-1.5"><Cpu className="size-4 shrink-0" /> Status / Last Task</div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {DUMMY_SESSIONS.map((s, i) => (
-                <tr key={i} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 text-foreground font-medium">{s.goal}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{s.sessionId}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{s.profileId}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.startedAt}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.duration}</td>
-                  <td className="px-4 py-3 text-emerald-500 font-medium">{s.cost}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.lastTask}</td>
-                </tr>
-              ))}
+              {allSessions.map((s, i) => {
+                const totalCostUsd = s.totalCostCents / 100;
+                const duration = s.startedAt && s.completedAt 
+                  ? `${((s.completedAt - s.startedAt) / 1000).toFixed(1)}s`
+                  : s.startedAt 
+                    ? "Running..." 
+                    : "—";
+
+                const startedString = s.startedAt 
+                  ? new Date(s.startedAt).toLocaleString()
+                  : "—";
+
+                return (
+                  <tr key={i} className="hover:bg-muted/10 transition-colors">
+                    <td className="px-5 py-4 text-foreground font-medium flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                      Ejecutar {s.toolName}
+                    </td>
+                    <td className="px-5 py-4 font-mono text-xs text-muted-foreground">{s.agentId}</td>
+                    <td className="px-5 py-4">
+                      <Badge variant="outline" className="py-0.5 px-2 font-medium text-xs border-muted-foreground/20 bg-muted/40">
+                        {getProfileName(s.profileId)}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground text-xs">{startedString}</td>
+                    <td className="px-5 py-4 text-muted-foreground text-xs font-mono">{duration}</td>
+                    <td className="px-5 py-4 text-emerald-500 font-mono font-medium">${totalCostUsd.toFixed(3)}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-foreground font-medium text-xs">
+                          {getLastTaskLabel(s.tasks)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          Status: {s.status.toUpperCase()}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-          {DUMMY_SESSIONS.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">No agent sessions found.</div>
+          {allSessions.length === 0 && (
+            <div className="p-12 text-center text-muted-foreground italic bg-muted/5">
+              No agent sessions captured yet. Execute a fiscal report first to view logs here.
+            </div>
           )}
         </div>
       </div>

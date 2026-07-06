@@ -38,10 +38,12 @@ import {
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "../ui/collapsible";
 import {
   Activity,
+  BarChart,
   Briefcase,
   ChevronRight,
   CreditCard,
   Globe,
+  Server,
   Settings,
   Users,
 } from "lucide-react";
@@ -156,14 +158,38 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Remote Browser">
-                    <Link href="/remote-browser" onClick={() => setOpenMobile(false)}>
-                      <Globe className="size-4" />
-                      <span>Remote Browser</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Analytics">
+                        <BarChart className="size-4" />
+                        <span>Analytics</span>
+                        <ChevronRight className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href="/analytics/overview" onClick={() => setOpenMobile(false)}>
+                              <BarChart className="size-4" />
+                              <span>Overview</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href="/analytics/llm-gateway" onClick={() => setOpenMobile(false)}>
+                              <Server className="size-4" />
+                              <span>LLM Gateway</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
                 
                 <Collapsible defaultOpen className="group/collapsible">
                   <SidebarMenuItem>
@@ -189,14 +215,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                             <Link href="/settings/profiles" onClick={() => setOpenMobile(false)}>
                               <Users className="size-4" />
                               <span>Profiles</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton asChild>
-                            <Link href="/settings/workspaces" onClick={() => setOpenMobile(false)}>
-                              <Briefcase className="size-4" />
-                              <span>Workspaces</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

@@ -9,9 +9,18 @@ import {
   EyeIcon,
   LockIcon,
   WrenchIcon,
+  UserIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useProfiles } from "@/hooks/use-profiles";
 import {
   type ChangeEvent,
   type Dispatch,

@@ -138,6 +138,16 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
             })
           );
 
+        let activeProfileId = "prof_48x";
+        if (typeof window !== "undefined") {
+          try {
+            const rawStoredProfileId = localStorage.getItem("active-profile-id");
+            if (rawStoredProfileId) {
+              activeProfileId = JSON.parse(rawStoredProfileId);
+            }
+          } catch (_) {}
+        }
+
         return {
           body: {
             id: request.id,
@@ -146,6 +156,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
               : { message: lastMessage }),
             selectedChatModel: currentModelIdRef.current,
             selectedVisibilityType: visibility,
+            profileId: activeProfileId,
             ...request.body,
           },
         };

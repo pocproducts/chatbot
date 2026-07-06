@@ -43,9 +43,10 @@ export function DataStreamHandler() {
       const anyDelta = delta as any;
 
       if (anyDelta.type === "data-agent-session-start") {
-        const { agentId, toolName, tasks } = anyDelta.data as {
+        const { agentId, toolName, profileId, tasks } = anyDelta.data as {
           agentId: string;
           toolName: string;
+          profileId?: string;
           toolKey: string;
           tasks: Array<{ id: string; label: string }>;
         };
@@ -65,6 +66,7 @@ export function DataStreamHandler() {
           const newSession = {
             agentId,
             toolName,
+            profileId,
             messageId: "",
             status: "running" as const,
             tasks: hydratedTasks,

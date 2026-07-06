@@ -21,6 +21,8 @@ export interface AgentSession {
   agentId: string;
   /** Human-readable tool name */
   toolName: string;
+  /** The Execution Profile ID connected to this session */
+  profileId?: string;
   /** The chat message this session belongs to */
   messageId: string;
   status: AgentSessionStatus;

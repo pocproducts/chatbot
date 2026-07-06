@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     message: singularMessage,
     isToolApprovalFlow,
     selectedVisibilityType,
+    profileId,
   } = body;
 
   const visibility = selectedVisibilityType || "private";
@@ -189,6 +190,7 @@ export async function POST(request: Request) {
                 agentId,
                 toolName: label,
                 toolKey: cmd,
+                profileId: profileId ?? "prof_48x",
                 tasks: tasks.map((t) => ({ id: t.id, label: t.label })),
               },
             } as any);
@@ -237,8 +239,8 @@ export async function POST(request: Request) {
               await new Promise((r) => setTimeout(r, delayPerTask));
 
               const taskDuration = Date.now() - taskStart;
-              // Mock cost: 0 for now, structured for future backend pricing
-              const costCents = 0;
+              // Mock cost: 0.4 cents ($0.004) per subtask
+              const costCents = cmd === "enviarmail" ? 0 : 0.4;
 
               // Task → completed
               dataStream.write({
@@ -262,12 +264,15 @@ export async function POST(request: Request) {
               data: { agentId, durationMs: totalDurationMs },
             } as any);
 
+            const totalCostCents = tasks.length * (cmd === "enviarmail" ? 0 : 0.4);
+            const formattedCost = (totalCostCents / 100).toFixed(3);
+
             if (cmd === "informefiscal") {
               const enc = Buffer.from(JSON.stringify(allJsonReports)).toString("base64");
-              const delta = `### 🔍 ${label} · ⏱️ ${duration}s · 👣 5 · 💰 $0\n\n<details><summary>📦 Ver JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n</details>\n\n[INFORME_FISCAL_BUTTON:${enc}]\n\n---\n\n`;
+              const delta = `### 🔍 ${label} · ⏱️ ${duration}s · 👣 5 · 💰 $${formattedCost}\n\n<details><summary>📦 Ver JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n</details>\n\n[INFORME_FISCAL_BUTTON:${enc}]\n\n---\n\n`;
               dataStream.write({ type: "text-delta", id: textPartId, delta });
             } else {
-              const delta = `### 🔍 ${label} · ⏱️ ${duration}s · 👣 5 · 💰 $0\n\n<details><summary>📦 Ver JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n</details>\n\n<details><summary>📋 Ver Reporte Formateado</summary>\n\n${formatSummary(cmd, data)}\n\n</details>\n\n---\n\n`;
+              const delta = `### 🔍 ${label} · ⏱️ ${duration}s · 👣 5 · 💰 $${formattedCost}\n\n<details><summary>📦 Ver JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n</details>\n\n<details><summary>📋 Ver Reporte Formateado</summary>\n\n${formatSummary(cmd, data)}\n\n</details>\n\n---\n\n`;
               dataStream.write({ type: "text-delta", id: textPartId, delta });
             }
           }
