@@ -2,13 +2,17 @@
 
 import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
 import { useProfiles } from "@/hooks/use-profiles";
-import { Clock, DollarSign, Activity, Hash, Tag, Cpu, Target, UserIcon } from "lucide-react";
+import { Clock, Activity, Tag, Cpu, Target, UserIcon } from "lucide-react";
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 
 export default function AgentSessionsPage() {
   const { allSessions } = useAgentSidebar();
   const { profiles } = useProfiles();
+
+  const sortedSessions = [...allSessions].sort(
+    (a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0)
+  );
 
   // Helper to find profile name of a session
   const getProfileName = (profileId?: string) => {
@@ -65,7 +69,7 @@ export default function AgentSessionsPage() {
                   <div className="flex items-center gap-1.5"><Activity className="size-4 shrink-0" /> Duration</div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><DollarSign className="size-4 shrink-0" /> Cost</div>
+                  <div className="flex items-center gap-1.5"><Activity className="size-4 shrink-0" /> Cost</div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
                   <div className="flex items-center gap-1.5"><Cpu className="size-4 shrink-0" /> Status / Last Task</div>
@@ -73,7 +77,7 @@ export default function AgentSessionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {allSessions.map((s, i) => {
+              {sortedSessions.map((s, i) => {
                 const totalCostUsd = s.totalCostCents / 100;
                 const duration = s.startedAt && s.completedAt 
                   ? `${((s.completedAt - s.startedAt) / 1000).toFixed(1)}s`
@@ -86,9 +90,9 @@ export default function AgentSessionsPage() {
                   : "—";
 
                 return (
-                  <tr key={i} className="hover:bg-muted/10 transition-colors">
+                  <tr key={s.agentId ?? i} className="hover:bg-muted/10 transition-colors">
                     <td className="px-5 py-4 text-foreground font-medium flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
+                      <span className={`h-2 w-2 rounded-full ${s.status === "running" ? "bg-amber-400 animate-pulse" : s.status === "completed" ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
                       Ejecutar {s.toolName}
                     </td>
                     <td className="px-5 py-4 font-mono text-xs text-muted-foreground">{s.agentId}</td>
@@ -115,7 +119,7 @@ export default function AgentSessionsPage() {
               })}
             </tbody>
           </table>
-          {allSessions.length === 0 && (
+          {sortedSessions.length === 0 && (
             <div className="p-12 text-center text-muted-foreground italic bg-muted/5">
               No agent sessions captured yet. Execute a fiscal report first to view logs here.
             </div>

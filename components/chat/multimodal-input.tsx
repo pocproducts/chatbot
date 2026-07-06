@@ -136,6 +136,12 @@ function PureMultimodalInput({
     ""
   );
 
+  const { profiles } = useProfiles();
+  const [activeProfileId, setActiveProfileId] = useLocalStorage<string>(
+    "active-profile-id",
+    profiles[0]?.id ?? "prof_48x"
+  );
+
   useEffect(() => {
     if (textareaRef.current) {
       const domValue = textareaRef.current.value;
@@ -444,9 +450,32 @@ function PureMultimodalInput({
           </Button>
         </div>
       </PromptInput>
+
+      {/* Profile Selector */}
+      <div className="flex items-center gap-2 mt-1">
+        <UserIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
+        <span className="text-xs text-muted-foreground/60">Profile:</span>
+        {profiles.length > 0 ? (
+          <Select value={activeProfileId} onValueChange={setActiveProfileId}>
+            <SelectTrigger className="h-7 border-none bg-transparent px-2 text-xs text-muted-foreground hover:text-foreground shadow-none focus:ring-0 gap-1 rounded-lg">
+              <SelectValue placeholder="Select profile..." />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {profiles.map((p) => (
+                <SelectItem key={p.id} value={p.id} className="text-xs">
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs text-muted-foreground/50 italic">No profiles — create one in Settings</span>
+        )}
+      </div>
     </div>
   );
 }
+
 
 export const MultimodalInput = memo(
   PureMultimodalInput,
