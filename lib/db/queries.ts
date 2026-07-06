@@ -3,7 +3,6 @@ import "server-only";
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   gt,
@@ -95,25 +94,6 @@ export async function saveChat({
     });
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to save chat");
-  }
-}
-
-export async function deleteChatById({ id }: { id: string }) {
-  try {
-    await db.delete(vote).where(eq(vote.chatId, id));
-    await db.delete(message).where(eq(message.chatId, id));
-    await db.delete(stream).where(eq(stream.chatId, id));
-
-    const [chatsDeleted] = await db
-      .delete(chat)
-      .where(eq(chat.id, id))
-      .returning();
-    return chatsDeleted;
-  } catch (_error) {
-    throw new ChatbotError(
-      "bad_request:database",
-      "Failed to delete chat by id"
-    );
   }
 }
 
@@ -242,20 +222,6 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
     return await db.insert(message).values(messages);
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to save messages");
-  }
-}
-
-export async function updateMessage({
-  id,
-  parts,
-}: {
-  id: string;
-  parts: DBMessage["parts"];
-}) {
-  try {
-    return await db.update(message).set({ parts }).where(eq(message.id, id));
-  } catch (_error) {
-    throw new ChatbotError("bad_request:database", "Failed to update message");
   }
 }
 
@@ -560,73 +526,4 @@ export async function updateChatTitleById({
   }
 }
 
-export async function getMessageCountByUserId({
-  id,
-  differenceInHours,
-}: {
-  id: string;
-  differenceInHours: number;
-}) {
-  try {
-    const cutoffTime = new Date(
-      Date.now() - differenceInHours * 60 * 60 * 1000
-    );
 
-    const [stats] = await db
-      .select({ count: count(message.id) })
-      .from(message)
-      .innerJoin(chat, eq(message.chatId, chat.id))
-      .where(
-        and(
-          eq(chat.userId, id),
-          gte(message.createdAt, cutoffTime),
-          eq(message.role, "user")
-        )
-      )
-      .execute();
-
-    return stats?.count ?? 0;
-  } catch (_error) {
-    throw new ChatbotError(
-      "bad_request:database",
-      "Failed to get message count by user id"
-    );
-  }
-}
-
-export async function createStreamId({
-  streamId,
-  chatId,
-}: {
-  streamId: string;
-  chatId: string;
-}) {
-  try {
-    await db
-      .insert(stream)
-      .values({ id: streamId, chatId, createdAt: new Date() });
-  } catch (_error) {
-    throw new ChatbotError(
-      "bad_request:database",
-      "Failed to create stream id"
-    );
-  }
-}
-
-export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
-  try {
-    const streamIds = await db
-      .select({ id: stream.id })
-      .from(stream)
-      .where(eq(stream.chatId, chatId))
-      .orderBy(asc(stream.createdAt))
-      .execute();
-
-    return streamIds.map(({ id }) => id);
-  } catch (_error) {
-    throw new ChatbotError(
-      "bad_request:database",
-      "Failed to get stream ids by chat id"
-    );
-  }
-}

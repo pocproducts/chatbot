@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/app/(auth)/auth";
+import { ChatbotError } from "@/lib/errors";
 
 const FileSchema = z.object({
   file: z
@@ -19,11 +20,11 @@ export async function POST(request: Request) {
   const session = await auth();
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return new ChatbotError("unauthorized:api").toResponse();
   }
 
   if (request.body === null) {
-    return new Response("Request body is empty", { status: 400 });
+    return new ChatbotError("bad_request:api").toResponse();
   }
 
   try {
@@ -31,17 +32,13 @@ export async function POST(request: Request) {
     const file = formData.get("file") as Blob;
 
     if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+      return new ChatbotError("bad_request:api").toResponse();
     }
 
     const validatedFile = FileSchema.safeParse({ file });
 
     if (!validatedFile.success) {
-      const errorMessage = validatedFile.error.errors
-        .map((error) => error.message)
-        .join(", ");
-
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
+      return new ChatbotError("bad_request:api").toResponse();
     }
 
     const filename = (formData.get("file") as File).name;
@@ -55,12 +52,9 @@ export async function POST(request: Request) {
 
       return NextResponse.json(data);
     } catch (_error) {
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      return new ChatbotError("bad_request:api").toResponse();
     }
   } catch (_error) {
-    return NextResponse.json(
-      { error: "Failed to process request" },
-      { status: 500 }
-    );
+    return new ChatbotError("bad_request:api").toResponse();
   }
 }

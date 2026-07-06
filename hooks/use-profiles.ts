@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 
 export interface Profile {
@@ -25,7 +25,7 @@ const DEFAULT_PROFILES: Profile[] = [
     createdAt: "2026-07-05",
     cookiesDomains: ["arca.gob.ar"],
     isAuthenticated: false,
-  }
+  },
 ];
 
 export function useProfiles() {

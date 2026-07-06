@@ -7,11 +7,11 @@ import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { Suggestion } from "./db/schema";
 
-export const messageMetadataSchema = z.object({
+const messageMetadataSchema = z.object({
   createdAt: z.string(),
 });
 
-export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
+type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 type weatherTool = InferUITool<typeof getWeather>;
 type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;

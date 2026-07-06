@@ -1,22 +1,22 @@
 "use client";
 
 import {
+  Activity,
+  BarChart,
+  ChevronRight,
+  CreditCard,
   MessageSquareIcon,
   PanelLeftIcon,
   PenSquareIcon,
-  TrashIcon,
+  Server,
+  Settings,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { useState } from "react";
-import { toast } from "sonner";
 import { useSWRConfig } from "swr";
-import { unstable_serialize } from "swr/infinite";
-import {
-  getChatHistoryPaginationKey,
-  SidebarHistory,
-} from "@/components/chat/sidebar-history";
+import { SidebarHistory } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
 import {
   Sidebar,
@@ -28,57 +28,25 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   SidebarTrigger,
   useSidebar,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "../ui/collapsible";
 import {
-  Activity,
-  BarChart,
-  Briefcase,
-  ChevronRight,
-  CreditCard,
-  Globe,
-  Server,
-  Settings,
-  Users,
-} from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
+
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile, toggleSidebar } = useSidebar();
   const { mutate } = useSWRConfig();
-  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
-
-  const handleDeleteAll = () => {
-    setShowDeleteAllDialog(false);
-    router.replace("/");
-    mutate(unstable_serialize(getChatHistoryPaginationKey), [], {
-      revalidate: false,
-    });
-
-    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`, {
-      method: "DELETE",
-    });
-
-    toast.success("Todos los informes eliminados");
-  };
-
   return (
     <>
       <Sidebar collapsible="icon">
@@ -121,7 +89,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    className="h-8 rounded-lg bg-primary !text-white text-[13px] font-semibold shadow-sm transition-all duration-150 hover:bg-primary/90 hover:shadow-md justify-center"
                     onClick={() => {
                       setOpenMobile(false);
                       router.push("/");
@@ -132,18 +100,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <span className="font-medium">Nuevo Informe</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {user && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setShowDeleteAllDialog(true)}
-                      tooltip="Borrar todos los informes"
-                    >
-                      <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Borrar todos</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -152,14 +108,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Agent Sessions">
-                    <Link href="/agent-sessions" onClick={() => setOpenMobile(false)}>
+                    <Link
+                      href="/agent-sessions"
+                      onClick={() => setOpenMobile(false)}
+                    >
                       <Activity className="size-4" />
                       <span>Agent Sessions</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                <Collapsible defaultOpen className="group/collapsible">
+                <Collapsible className="group/collapsible" defaultOpen>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton tooltip="Analytics">
@@ -172,7 +131,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       <SidebarMenuSub>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild>
-                            <Link href="/analytics/overview" onClick={() => setOpenMobile(false)}>
+                            <Link
+                              href="/analytics/overview"
+                              onClick={() => setOpenMobile(false)}
+                            >
                               <BarChart className="size-4" />
                               <span>Overview</span>
                             </Link>
@@ -180,7 +142,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         </SidebarMenuSubItem>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild>
-                            <Link href="/analytics/llm-gateway" onClick={() => setOpenMobile(false)}>
+                            <Link
+                              href="/analytics/llm-gateway"
+                              onClick={() => setOpenMobile(false)}
+                            >
                               <Server className="size-4" />
                               <span>LLM Gateway</span>
                             </Link>
@@ -190,8 +155,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     </CollapsibleContent>
                   </SidebarMenuItem>
                 </Collapsible>
-                
-                <Collapsible defaultOpen className="group/collapsible">
+
+                <Collapsible className="group/collapsible" defaultOpen>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton tooltip="Settings">
@@ -204,7 +169,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       <SidebarMenuSub>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild>
-                            <Link href="/settings/billing" onClick={() => setOpenMobile(false)}>
+                            <Link
+                              href="/settings/billing"
+                              onClick={() => setOpenMobile(false)}
+                            >
                               <CreditCard className="size-4" />
                               <span>Billing</span>
                             </Link>
@@ -212,7 +180,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         </SidebarMenuSubItem>
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild>
-                            <Link href="/settings/profiles" onClick={() => setOpenMobile(false)}>
+                            <Link
+                              href="/settings/profiles"
+                              onClick={() => setOpenMobile(false)}
+                            >
                               <Users className="size-4" />
                               <span>Profiles</span>
                             </Link>
@@ -232,26 +203,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
-
-      <AlertDialog
-        onOpenChange={setShowDeleteAllDialog}
-        open={showDeleteAllDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Borrar todos los informes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminarán permanentemente todos tus informes de nuestros servidores.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAll}>
-              Borrar Todos
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
