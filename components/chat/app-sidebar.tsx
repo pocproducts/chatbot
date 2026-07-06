@@ -31,7 +31,20 @@ import {
   SidebarRail,
   SidebarTrigger,
   useSidebar,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "../ui/collapsible";
+import {
+  Activity,
+  Briefcase,
+  ChevronRight,
+  CreditCard,
+  Globe,
+  Settings,
+  Users,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,7 +74,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       method: "DELETE",
     });
 
-    toast.success("All chats deleted");
+    toast.success("Todos los informes eliminados");
   };
 
   return (
@@ -111,10 +124,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       setOpenMobile(false);
                       router.push("/");
                     }}
-                    tooltip="New Chat"
+                    tooltip="Nuevo Informe"
                   >
                     <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
+                    <span className="font-medium">Nuevo Informe</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user && (
@@ -122,13 +135,75 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <SidebarMenuButton
                       className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => setShowDeleteAllDialog(true)}
-                      tooltip="Delete All Chats"
+                      tooltip="Borrar todos los informes"
                     >
                       <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
+                      <span className="text-[13px]">Borrar todos</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup className="pt-0">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Agent Sessions">
+                    <Link href="/agent-sessions" onClick={() => setOpenMobile(false)}>
+                      <Activity className="size-4" />
+                      <span>Agent Sessions</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Remote Browser">
+                    <Link href="/remote-browser" onClick={() => setOpenMobile(false)}>
+                      <Globe className="size-4" />
+                      <span>Remote Browser</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Settings">
+                        <Settings className="size-4" />
+                        <span>Settings</span>
+                        <ChevronRight className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href="/settings/billing" onClick={() => setOpenMobile(false)}>
+                              <CreditCard className="size-4" />
+                              <span>Billing</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href="/settings/profiles" onClick={() => setOpenMobile(false)}>
+                              <Users className="size-4" />
+                              <span>Profiles</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href="/settings/workspaces" onClick={() => setOpenMobile(false)}>
+                              <Briefcase className="size-4" />
+                              <span>Workspaces</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -146,16 +221,15 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
+            <AlertDialogTitle>¿Borrar todos los informes?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all
-              your chats and remove them from our servers.
+              Esta acción no se puede deshacer. Se eliminarán permanentemente todos tus informes de nuestros servidores.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAll}>
-              Delete All
+              Borrar Todos
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

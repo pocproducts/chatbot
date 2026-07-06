@@ -20,6 +20,7 @@ type MessagesProps = {
   isReadonly: boolean;
   isArtifactVisible: boolean;
   isLoading?: boolean;
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
   selectedModelId: string;
   onEditMessage?: (message: ChatMessage) => void;
 };
@@ -35,6 +36,7 @@ function PureMessages({
   isReadonly,
   isArtifactVisible,
   isLoading,
+  sendMessage,
   selectedModelId: _selectedModelId,
   onEditMessage,
 }: MessagesProps) {
@@ -62,7 +64,7 @@ function PureMessages({
   return (
     <div className="relative flex-1 bg-background">
       {messages.length === 0 && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+        <div className="absolute inset-0 z-10 flex w-full items-center justify-center">
           <Greeting />
         </div>
       )}

@@ -1,372 +1,323 @@
-import { geolocation, ipAddress } from "@vercel/functions";
 import {
-  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateId,
-  stepCountIs,
-  streamText,
 } from "ai";
-import { checkBotId } from "botid/server";
-import { after } from "next/server";
-import { createResumableStreamContext } from "resumable-stream";
-import { auth, type UserType } from "@/app/(auth)/auth";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import {
-  allowedModelIds,
-  chatModels,
-  DEFAULT_CHAT_MODEL,
-  getCapabilities,
-} from "@/lib/ai/models";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { createDocument } from "@/lib/ai/tools/create-document";
-import { editDocument } from "@/lib/ai/tools/edit-document";
-import { getWeather } from "@/lib/ai/tools/get-weather";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
-import {
-  createStreamId,
-  deleteChatById,
-  getChatById,
-  getMessageCountByUserId,
-  getMessagesByChatId,
-  saveChat,
-  saveMessages,
-  updateChatTitleById,
-  updateMessage,
-} from "@/lib/db/queries";
-import type { DBMessage } from "@/lib/db/schema";
+import { auth } from "@/app/(auth)/auth";
+import { generateUUID } from "@/lib/utils";
 import { ChatbotError } from "@/lib/errors";
-import { checkIpRateLimit } from "@/lib/ratelimit";
-import type { ChatMessage } from "@/lib/types";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
-import { generateTitleFromUserMessage } from "../../actions";
-import { type PostRequestBody, postRequestBodySchema } from "./schema";
+import { FISCAL_COMMAND_MAP } from "@/lib/ai/tools/fiscal-tools";
+import { buildSubtasksForTool } from "@/lib/ai/tools/agent-execution";
+import { 
+  getChatById, 
+  saveChat,
+  saveMessages, 
+  updateChatTitleById 
+} from "@/lib/db/queries";
 
 export const maxDuration = 60;
 
-function getStreamContext() {
-  try {
-    return createResumableStreamContext({ waitUntil: after });
-  } catch (_) {
-    return null;
-  }
+// ─── Mock delay config ────────────────────────────────────────────────────────
+// 5 000 ms total per tool. Tasks share the budget proportionally.
+const TOOL_MOCK_DELAY_MS = 5_000;
+
+function generateAgentId(): string {
+  return `agent-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export { getStreamContext };
-
+/**
+ * API Chat - Fiscal Console (Mock)
+ * Tools execute sequentially (concatenated). Each tool emits task-level
+ * stream events so the sidebar can track per-task progress in real time.
+ */
 export async function POST(request: Request) {
-  let requestBody: PostRequestBody;
+  const body = await request.json();
+  const {
+    id,
+    messages: initialMessages = [],
+    message: singularMessage,
+    isToolApprovalFlow,
+    selectedVisibilityType,
+  } = body;
 
-  try {
-    const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
-    return new ChatbotError("bad_request:api").toResponse();
+  const visibility = selectedVisibilityType || "private";
+  const uiMessages = singularMessage 
+    ? [singularMessage] 
+    : (initialMessages || []);
+
+  const session = await auth();
+  
+  if (!session?.user) {
+    return new ChatbotError("unauthorized:chat").toResponse();
   }
 
   try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const message = uiMessages.at(-1);
+    if (!message) return new ChatbotError("bad_request:api").toResponse();
 
-    const [, session] = await Promise.all([
-      checkBotId().catch(() => null),
-      auth(),
-    ]);
-
-    if (!session?.user) {
-      return new ChatbotError("unauthorized:chat").toResponse();
-    }
-
-    const chatModel = allowedModelIds.has(selectedChatModel)
-      ? selectedChatModel
-      : DEFAULT_CHAT_MODEL;
-
-    await checkIpRateLimit(ipAddress(request));
-
-    const userType: UserType = session.user.type;
-
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 1,
-    });
-
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerHour) {
-      return new ChatbotError("rate_limit:chat").toResponse();
-    }
-
-    const isToolApprovalFlow = Boolean(messages);
-
-    const chat = await getChatById({ id });
-    let messagesFromDb: DBMessage[] = [];
-    let titlePromise: Promise<string> | null = null;
-
-    if (chat) {
-      if (chat.userId !== session.user.id) {
-        return new ChatbotError("forbidden:chat").toResponse();
-      }
-      messagesFromDb = await getMessagesByChatId({ id });
-    } else if (message?.role === "user") {
-      await saveChat({
-        id,
-        userId: session.user.id,
-        title: "New chat",
-        visibility: selectedVisibilityType,
-      });
-      titlePromise = generateTitleFromUserMessage({ message });
-    }
-
-    let uiMessages: ChatMessage[];
-
-    if (isToolApprovalFlow && messages) {
-      const dbMessages = convertToUIMessages(messagesFromDb);
-      const approvalStates = new Map(
-        messages.flatMap(
-          (m) =>
-            m.parts
-              ?.filter(
-                (p: Record<string, unknown>) =>
-                  p.state === "approval-responded" ||
-                  p.state === "output-denied"
-              )
-              .map((p: Record<string, unknown>) => [
-                String(p.toolCallId ?? ""),
-                p,
-              ]) ?? []
-        )
-      );
-      uiMessages = dbMessages.map((msg) => ({
-        ...msg,
-        parts: msg.parts.map((part) => {
-          if (
-            "toolCallId" in part &&
-            approvalStates.has(String(part.toolCallId))
-          ) {
-            return { ...part, ...approvalStates.get(String(part.toolCallId)) };
-          }
-          return part;
-        }),
-      })) as ChatMessage[];
-    } else {
-      uiMessages = [
-        ...convertToUIMessages(messagesFromDb),
-        message as ChatMessage,
-      ];
-    }
-
-    const { longitude, latitude, city, country } = geolocation(request);
-
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
-
-    if (message?.role === "user") {
-      await saveMessages({
-        messages: [
-          {
-            chatId: id,
-            id: message.id,
-            role: "user",
-            parts: message.parts,
-            attachments: [],
-            createdAt: new Date(),
-          },
-        ],
-      });
-    }
-
-    const modelConfig = chatModels.find((m) => m.id === chatModel);
-    const modelCapabilities = await getCapabilities();
-    const capabilities = modelCapabilities[chatModel];
-    const isReasoningModel = capabilities?.reasoning === true;
-    const supportsTools = capabilities?.tools === true;
-
-    const modelMessages = await convertToModelMessages(uiMessages);
-
-    const stream = createUIMessageStream({
-      originalMessages: isToolApprovalFlow ? uiMessages : undefined,
-      execute: async ({ writer: dataStream }) => {
-        const result = streamText({
-          model: getLanguageModel(chatModel),
-          system: systemPrompt({ requestHints, supportsTools }),
-          messages: modelMessages,
-          stopWhen: stepCountIs(5),
-          experimental_activeTools:
-            isReasoningModel && !supportsTools
-              ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "editDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
-          providerOptions: {
-            ...(modelConfig?.gatewayOrder && {
-              gateway: { order: modelConfig.gatewayOrder },
-            }),
-            ...(modelConfig?.reasoningEffort && {
-              openai: { reasoningEffort: modelConfig.reasoningEffort },
-            }),
-          },
-          tools: {
-            getWeather,
-            createDocument: createDocument({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-            editDocument: editDocument({ dataStream, session }),
-            updateDocument: updateDocument({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-          },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
-
-        dataStream.merge(
-          result.toUIMessageStream({ sendReasoning: isReasoningModel })
-        );
-
-        if (titlePromise) {
-          try {
-            const title = await titlePromise;
-            dataStream.write({ type: "data-chat-title", data: title });
-            updateChatTitleById({ chatId: id, title });
-          } catch (_) {
-            /* non-fatal */
-          }
-        }
-      },
-      generateId: generateUUID,
-      onFinish: async ({ messages: finishedMessages }) => {
-        if (isToolApprovalFlow) {
-          for (const finishedMsg of finishedMessages) {
-            const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
-            if (existingMsg) {
-              await updateMessage({
-                id: finishedMsg.id,
-                parts: finishedMsg.parts,
-              });
-            } else {
-              await saveMessages({
-                messages: [
-                  {
-                    id: finishedMsg.id,
-                    role: finishedMsg.role,
-                    parts: finishedMsg.parts,
-                    createdAt: new Date(),
-                    attachments: [],
-                    chatId: id,
-                  },
-                ],
-              });
-            }
-          }
-        } else if (finishedMessages.length > 0) {
-          await saveMessages({
-            messages: finishedMessages.map((currentMessage) => ({
-              id: currentMessage.id,
-              role: currentMessage.role,
-              parts: currentMessage.parts,
-              createdAt: new Date(),
-              attachments: [],
-              chatId: id,
-            })),
+    // Persist initial message for chat history
+    if (uiMessages.length === 1 && session.user?.id) {
+      try {
+        const existingChat = await getChatById({ id });
+        if (!existingChat) {
+          const rawText = typeof message.content === 'string' ? message.content : (message.parts?.find((p:any)=>p.type==='text')?.text || '');
+          const quickCuitMatch = rawText.match(/(\d{11})/);
+          
+          const now = new Date();
+          const day = now.getDate().toString().padStart(2, "0");
+          const month = (now.getMonth() + 1).toString().padStart(2, "0");
+          const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+          const timestamp = `${day}/${month} ${time}`;
+          const title = quickCuitMatch ? `Informe ${quickCuitMatch[1]} — ${timestamp}` : `Consola Fiscal — ${timestamp}`;
+          
+          await saveChat({
+            id,
+            userId: session.user.id,
+            title,
+            visibility,
           });
         }
-      },
-      onError: (error) => {
-        if (
-          error instanceof Error &&
-          error.message?.includes(
-            "AI Gateway requires a valid credit card on file to service requests"
-          )
-        ) {
-          return "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits.";
-        }
-        return "Oops, an error occurred!";
-      },
-    });
 
-    return createUIMessageStreamResponse({
-      stream,
-      async consumeSseStream({ stream: sseStream }) {
-        if (!process.env.REDIS_URL) {
-          return;
-        }
-        try {
-          const streamContext = getStreamContext();
-          if (streamContext) {
-            const streamId = generateId();
-            await createStreamId({ streamId, chatId: id });
-            await streamContext.createNewResumableStream(
-              streamId,
-              () => sseStream
-            );
+        await saveMessages({
+          messages: [{
+            id: generateUUID(),
+            chatId: id,
+            role: message.role,
+            parts: message.parts || (message.content ? [{ type: "text", text: message.content }] : []),
+            attachments: message.attachments || [],
+            createdAt: new Date(),
+          }],
+        });
+      } catch (e) {
+        console.error("Historical persistence failed:", e);
+      }
+    }
+
+    let userText = "";
+    if (message.content && typeof message.content === "string") {
+      userText = message.content.trim();
+    } else if (message.parts) {
+      userText = (message.parts
+        ?.filter((p: any) => p.type === "text")
+        .map((p: any) => String(p.text ?? ""))
+        .join("") ?? "").trim();
+    }
+
+    const fiscalMatch = userText.match(/^(\d{11})\s+((?:\/[^/]+?)(?:\s+\/[^/]+?)*)?\s*$/i);
+    const cuit = fiscalMatch ? fiscalMatch[1] : null;
+
+    if (fiscalMatch && cuit) {
+      console.log("FISCAL CONSOLE EXECUTION - CUIT:", cuit);
+
+      const streamInstance = createUIMessageStream({
+        originalMessages: isToolApprovalFlow ? uiMessages : undefined,
+        execute: async ({ writer: dataStream }) => {
+          const textPartId = generateId();
+          dataStream.write({ type: "text-start", id: textPartId });
+
+          const commandsSection = fiscalMatch[2] ?? "";
+          let commandNames = (commandsSection.match(/\/([^/]+?)(?=\s*\/|$)/g) ?? [])
+            .map((c: any) => c.slice(1).trim().toLowerCase());
+
+          // Macro expansion for /todo
+          if (commandNames.includes("todo")) {
+            commandNames = [
+              "consultaarca", 
+              "sistemaregistral", 
+              "misfacilidades", 
+              "deudavencimientos", 
+              "rentascordoba", 
+              "calendariovencimientosarca", 
+              "informefiscal", 
+              "enviarmail"
+            ];
           }
-        } catch (_) {
-          /* non-critical */
-        }
+
+          const LABEL_MAP: Record<string, string> = {
+            consultaarca: "ConsultaArca",
+            sistemaregistral: "SistemaRegistral",
+            misfacilidades: "MisFacilidades",
+            deudavencimientos: "DeudaVencimientos",
+            rentascordoba: "RentasCordoba",
+            calendariovencimientosarca: "CalendarioVencimientosArca",
+            informefiscal: "📖 InformeFiscal",
+            enviarmail: "EnviarMail",
+          };
+
+          const formatSummary = (cmd: string, data: any) => {
+            switch (cmd) {
+              case "consultaarca":
+                return `**Denominación**: ${data.denominacion}\n- **Condición**: ${data.condicionFiscal}\n- **Impuestos**: ${data.obligaciones.map((o: any) => `${o.impuesto} (${o.estado})`).join(", ")}`;
+              case "sistemaregistral":
+                return `**Razón Social**: ${data.razonSocial}\n- **Actividad**: ${data.actividadPrincipal.descripcion}\n- **Domicilio**: ${data.domicilioFiscal.calle} ${data.domicilioFiscal.numero}, ${data.domicilioFiscal.localidad}`;
+              case "misfacilidades":
+                return data.planesActivos.length > 0 
+                  ? `**Planes Activos**: ${data.planesActivos.map((p: any) => `${p.regimen} (${p.estadoPlan})`).join(", ")}`
+                  : "No hay planes de pago activos.";
+              case "deudavencimientos":
+                return `**Saldo Total**: $${data.saldoTotal}\n- **Deudas Vencidas**: ${data.deudasVencidas.length}\n- **Próximo Vencimiento**: ${data.proximoVencimiento}`;
+              case "rentascordoba":
+                return `**Inscripción**: ${data.inscripcionIIBB.tipo}\n- **Estado**: ${data.inscripcionIIBB.estado}\n- **Saldo a Favor**: $${data.declaracionesJuradas.saldoAFavor}`;
+              case "calendariovencimientosarca":
+                return `**Periodo**: ${data.periodo}\n- **Vencimientos Próximos**: ${data.vencimientos.slice(0, 3).map((v: any) => `${v.fecha}: ${v.obligacion}`).join(", ")}`;
+              case "informefiscal":
+                return `**Riesgo Fiscal [Score]**: ${data.metadata.scoreRiesgoFiscal}/100\n- **ID**: ${data.metadata.idReporte}\n- **Estado General**: ${data.resumenCumplimiento.map((r: any) => `${r.area}: ${r.estado}`).join(", ")}`;
+              case "enviarmail":
+                return `**ID Transacción**: ${data.transaccion.idEnvio}\n- **Archivo**: ${data.archivoAdjunto.nombre}\n- **Peso**: ${data.archivoAdjunto.tamaño}`;
+              default: return "Resumen no disponible.";
+            }
+          };
+
+          dataStream.write({ type: "text-delta", id: textPartId, delta: `## Reporte Fiscal — CUIT ${cuit}\n\n` });
+
+          const allJsonReports: Array<{ tool: string; data: any }> = [];
+
+          // ── Sequential (concatenated) tool execution ──────────────────────
+          for (const cmd of commandNames) {
+            const executor = FISCAL_COMMAND_MAP[cmd];
+            if (!executor) continue;
+
+            const label = LABEL_MAP[cmd] ?? cmd;
+            const agentId = generateAgentId();
+            const tasks = buildSubtasksForTool(cmd);
+            const taskCount = tasks.length;
+
+            // Notify client: session started
+            dataStream.write({
+              type: "data-agent-session-start",
+              data: {
+                agentId,
+                toolName: label,
+                toolKey: cmd,
+                tasks: tasks.map((t) => ({ id: t.id, label: t.label })),
+              },
+            } as any);
+
+            // Write the "agent working" marker text so the button appears
+            dataStream.write({ type: "text-delta", id: textPartId, delta: `_Agente trabajando en ${label}..._\n\n` });
+
+            const sessionStartMs = Date.now();
+
+            if (cmd === "enviarmail") {
+              // EnviarMail: single task, no real execution — emit completed immediately
+              dataStream.write({
+                type: "data-agent-task-update",
+                data: { agentId, taskId: "task-0", status: "running", durationMs: undefined, costCents: 0 },
+              } as any);
+
+              await new Promise((r) => setTimeout(r, 1_000));
+
+              dataStream.write({
+                type: "data-agent-task-update",
+                data: { agentId, taskId: "task-0", status: "completed", durationMs: 1_000, costCents: 0 },
+              } as any);
+
+              dataStream.write({
+                type: "data-agent-session-complete",
+                data: { agentId, durationMs: Date.now() - sessionStartMs },
+              } as any);
+
+              dataStream.write({ type: "text-delta", id: textPartId, delta: `### 📧 ${label} · ⏱️ 0.5s · 👣 1 · 💰 $0\n> **Acción requerida**: Por favor, ingrese el mail de destino para enviar el reporte consolidado.\n\n[MAIL_INPUT_REPLACEMENT]\n\n` });
+              continue;
+            }
+
+            // ── Generic tool: distribute 5s across all tasks sequentially ──
+            const delayPerTask = Math.floor(TOOL_MOCK_DELAY_MS / taskCount);
+
+            for (let i = 0; i < tasks.length; i++) {
+              const task = tasks[i];
+              const taskStart = Date.now();
+
+              // Task → running
+              dataStream.write({
+                type: "data-agent-task-update",
+                data: { agentId, taskId: task.id, status: "running" },
+              } as any);
+
+              await new Promise((r) => setTimeout(r, delayPerTask));
+
+              const taskDuration = Date.now() - taskStart;
+              // Mock cost: 0 for now, structured for future backend pricing
+              const costCents = 0;
+
+              // Task → completed
+              dataStream.write({
+                type: "data-agent-task-update",
+                data: { agentId, taskId: task.id, status: "completed", durationMs: taskDuration, costCents },
+              } as any);
+            }
+
+            // Execute the actual (mocked) function after the visual delay
+            const data = await executor(cuit);
+            const totalDurationMs = (Date.now() - sessionStartMs);
+            const duration = (totalDurationMs / 1000).toFixed(1);
+
+            if (cmd !== "informefiscal") {
+              allJsonReports.push({ tool: label, data });
+            }
+
+            // Notify client: session completed
+            dataStream.write({
+              type: "data-agent-session-complete",
+              data: { agentId, durationMs: totalDurationMs },
+            } as any);
+
+            if (cmd === "informefiscal") {
+              const enc = Buffer.from(JSON.stringify(allJsonReports)).toString("base64");
+              const delta = `### 🔍 ${label} · ⏱️ ${duration}s · 👣 5 · 💰 $0\n\n<details><summary>📦 Ver JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n</details>\n\n[INFORME_FISCAL_BUTTON:${enc}]\n\n---\n\n`;
+              dataStream.write({ type: "text-delta", id: textPartId, delta });
+            } else {
+              const delta = `### 🔍 ${label} · ⏱️ ${duration}s · 👣 5 · 💰 $0\n\n<details><summary>📦 Ver JSON</summary>\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n</details>\n\n<details><summary>📋 Ver Reporte Formateado</summary>\n\n${formatSummary(cmd, data)}\n\n</details>\n\n---\n\n`;
+              dataStream.write({ type: "text-delta", id: textPartId, delta });
+            }
+          }
+          // ── End of sequential execution ───────────────────────────────────
+
+          dataStream.write({ type: "text-end", id: textPartId });
+
+          if (uiMessages.length === 1) {
+            const now = new Date();
+            const day = now.getDate().toString().padStart(2, "0");
+            const month = (now.getMonth() + 1).toString().padStart(2, "0");
+            const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+            const timestamp = `${day}/${month} ${time}`;
+            const title = `Informe ${cuit} — ${timestamp}`;
+            dataStream.write({ type: "data-chat-title", data: title });
+            try {
+              await updateChatTitleById({ chatId: id, title });
+            } catch (err) {
+              console.error("Failed to save chat title:", err);
+            }
+          }
+        },
+        generateId: generateUUID
+      });
+
+      return createUIMessageStreamResponse({ stream: streamInstance });
+    }
+
+    // Fallback: non-fiscal input
+    const stream = createUIMessageStream({
+      execute: async ({ writer: dataStream }) => {
+        const textPartId = generateId();
+        dataStream.write({ type: "text-start", id: textPartId });
+        dataStream.write({ 
+            type: "text-delta", 
+            id: textPartId, 
+            delta: "⚠️ **El sistema de Chat General está desactivado.**\n\nEste entorno está configurado exclusivamente como **Consola Fiscal**. Para generar un reporte, ingrese un CUIT seguido de los comandos deseados (ej: `20389727785 /ConsultaArca /RentasCordoba`)." 
+        });
+        dataStream.write({ type: "text-end", id: textPartId });
       },
+      generateId: generateUUID
     });
+
+    return createUIMessageStreamResponse({ stream });
   } catch (error) {
-    const vercelId = request.headers.get("x-vercel-id");
-
-    if (error instanceof ChatbotError) {
-      return error.toResponse();
-    }
-
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatbotError("bad_request:activate_gateway").toResponse();
-    }
-
-    console.error("Unhandled error in chat API:", error, { vercelId });
+    console.error("Critical error in console API:", error);
     return new ChatbotError("offline:chat").toResponse();
   }
 }
 
 export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return new ChatbotError("bad_request:api").toResponse();
-  }
-
-  const session = await auth();
-
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
-  }
-
-  const chat = await getChatById({ id });
-
-  if (chat?.userId !== session.user.id) {
-    return new ChatbotError("forbidden:chat").toResponse();
-  }
-
-  const deletedChat = await deleteChatById({ id });
-
-  return Response.json(deletedChat, { status: 200 });
+  return Response.json({ success: true }, { status: 200 });
 }

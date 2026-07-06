@@ -20,6 +20,8 @@ import {
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
+import { AgentSidebar } from "./agent-sidebar";
+import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
 import { ChatHeader } from "./chat-header";
 import { DataStreamHandler } from "./data-stream-handler";
 import { submitEditedMessage } from "./message-editor";
@@ -54,6 +56,7 @@ export function ChatShell() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
+  const { isOpen: isAgentSidebarOpen, close: closeAgentSidebar } = useAgentSidebar();
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
@@ -64,10 +67,17 @@ export function ChatShell() {
       prevChatIdRef.current = chatId;
       stopRef.current();
       setArtifact(initialArtifactData);
+      closeAgentSidebar();
       setEditingMessage(null);
       setAttachments([]);
     }
-  }, [chatId, setArtifact]);
+  }, [chatId, setArtifact, closeAgentSidebar]);
+
+  useEffect(() => {
+    if (isArtifactVisible && isAgentSidebarOpen) {
+      closeAgentSidebar();
+    }
+  }, [isArtifactVisible, isAgentSidebarOpen, closeAgentSidebar]);
 
   return (
     <>
@@ -75,7 +85,7 @@ export function ChatShell() {
         <div
           className={cn(
             "flex min-w-0 flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isArtifactVisible ? "w-[40%]" : "w-full"
+            isArtifactVisible ? "w-[40%]" : isAgentSidebarOpen ? "w-[60%]" : "w-full"
           )}
         >
           <ChatHeader
@@ -88,12 +98,12 @@ export function ChatShell() {
             <Messages
               addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}
-              isArtifactVisible={isArtifactVisible}
+              isArtifactVisible={isArtifactVisible || isAgentSidebarOpen}
               isLoading={isLoading}
               isReadonly={isReadonly}
               messages={messages}
               onEditMessage={(msg) => {
-                const text = msg.parts
+                const text = (msg.parts ?? [])
                   ?.filter((p) => p.type === "text")
                   .map((p) => p.text)
                   .join("");
@@ -101,51 +111,31 @@ export function ChatShell() {
                 setEditingMessage(msg);
               }}
               regenerate={regenerate}
+              sendMessage={sendMessage}
               selectedModelId={currentModelId}
               setMessages={setMessages}
               status={status}
               votes={votes}
             />
 
-            <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
-              {!isReadonly && (
-                <MultimodalInput
-                  attachments={attachments}
-                  chatId={chatId}
-                  editingMessage={editingMessage}
-                  input={input}
-                  isLoading={isLoading}
-                  messages={messages}
-                  onCancelEdit={() => {
-                    setEditingMessage(null);
-                    setInput("");
-                  }}
-                  onModelChange={setCurrentModelId}
-                  selectedModelId={currentModelId}
-                  selectedVisibilityType={visibilityType}
-                  sendMessage={
-                    editingMessage
-                      ? async () => {
-                          const msg = editingMessage;
-                          setEditingMessage(null);
-                          await submitEditedMessage({
-                            message: msg,
-                            text: input,
-                            setMessages,
-                            regenerate,
-                          });
-                          setInput("");
-                        }
-                      : sendMessage
-                  }
-                  setAttachments={setAttachments}
-                  setInput={setInput}
-                  setMessages={setMessages}
-                  status={status}
-                  stop={stop}
-                />
-              )}
-            </div>
+            {messages.length > 0 && (
+              <MultimodalInput
+                chatId={chatId}
+                input={input}
+                setInput={setInput}
+                status={status}
+                stop={stop}
+                attachments={attachments}
+                setAttachments={setAttachments}
+                messages={messages}
+                setMessages={setMessages}
+                sendMessage={sendMessage}
+                selectedModelId={currentModelId}
+                onModelChange={setCurrentModelId}
+                isLoading={isLoading}
+                selectedVisibilityType={visibilityType}
+              />
+            )}
           </div>
         </div>
 
@@ -167,6 +157,10 @@ export function ChatShell() {
           stop={stop}
           votes={votes}
         />
+
+        {isAgentSidebarOpen && !isArtifactVisible && (
+          <AgentSidebar />
+        )}
       </div>
 
       <DataStreamHandler />

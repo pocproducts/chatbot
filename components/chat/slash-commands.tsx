@@ -1,13 +1,16 @@
 "use client";
 
 import {
-  BombIcon,
-  ListIcon,
-  PaletteIcon,
-  PenLineIcon,
-  PenSquareIcon,
-  Trash2Icon,
-  XIcon,
+  Calendar,
+  ClipboardList,
+  Database,
+  FileSearch,
+  FileText,
+  Handshake,
+  Mail,
+  MapPin,
+  Trash2,
+  Zap,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -22,51 +25,64 @@ export type SlashCommand = {
 
 export const slashCommands: SlashCommand[] = [
   {
-    name: "new",
-    description: "Start a new chat",
-    icon: <PenSquareIcon className="size-3.5" />,
-    action: "new",
+    name: "Todo",
+    description: "Ejecutar todas las herramientas fiscales a la vez",
+    icon: <Zap className="size-3.5 text-amber-500 fill-amber-500/20" />,
+    action: "todo",
   },
   {
-    name: "clear",
-    description: "Clear current chat",
-    icon: <Trash2Icon className="size-3.5" />,
-    action: "clear",
+    name: "ConsultaArca",
+    description: "Obligaciones impositivas en ARCA (ex-AFIP)",
+    icon: <FileSearch className="size-3.5" />,
+    action: "consultaarca",
   },
   {
-    name: "rename",
-    description: "Rename current chat",
-    icon: <PenLineIcon className="size-3.5" />,
-    action: "rename",
+    name: "SistemaRegistral",
+    description: "Datos de inscripción y constancias registrales",
+    icon: <Database className="size-3.5" />,
+    action: "sistemaregistral",
   },
   {
-    name: "model",
-    description: "Change the AI model",
-    icon: <ListIcon className="size-3.5" />,
-    action: "model",
+    name: "MisFacilidades",
+    description: "Planes de pago y moratorias vigentes",
+    icon: <Handshake className="size-3.5" />,
+    action: "misfacilidades",
   },
   {
-    name: "theme",
-    description: "Toggle dark/light mode",
-    icon: <PaletteIcon className="size-3.5" />,
-    action: "theme",
+    name: "DeudaVencimientos",
+    description: "Deuda vencida y próximos vencimientos ARCA",
+    icon: <ClipboardList className="size-3.5" />,
+    action: "deudavencimientos",
   },
   {
-    name: "delete",
-    description: "Delete current chat",
-    icon: <XIcon className="size-3.5" />,
-    action: "delete",
+    name: "RentasCordoba",
+    description: "Estado de IIBB en Rentas Córdoba",
+    icon: <MapPin className="size-3.5" />,
+    action: "rentascordoba",
   },
   {
-    name: "purge",
-    description: "Delete all chats",
-    icon: <BombIcon className="size-3.5" />,
-    action: "purge",
+    name: "CalendarioVencimientosArca",
+    description: "Calendario fiscal de vencimientos ARCA",
+    icon: <Calendar className="size-3.5" />,
+    action: "calendariovencimientosarca",
+  },
+  {
+    name: "InformeFiscal",
+    description: "Concentrar todas las herramientas ejecutadas",
+    icon: <FileText className="size-3.5" />,
+    action: "informefiscal",
+  },
+  {
+    name: "EnviarMail",
+    description: "Enviar reporte consolidado por mail",
+    icon: <Mail className="size-3.5" />,
+    action: "enviarmail",
   },
 ];
 
 type SlashCommandMenuProps = {
   query: string;
+  context: string;
   onSelect: (command: SlashCommand) => void;
   onClose: () => void;
   selectedIndex: number;
@@ -74,14 +90,17 @@ type SlashCommandMenuProps = {
 
 export function SlashCommandMenu({
   query,
+  context,
   onSelect,
   onClose: _onClose,
   selectedIndex,
 }: SlashCommandMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const filtered = slashCommands.filter((cmd) =>
-    cmd.name.startsWith(query.toLowerCase())
-  );
+  const filtered = slashCommands.filter((cmd) => {
+    const alreadySelected = context.toLowerCase().includes(cmd.name.toLowerCase());
+    const matchesQuery = cmd.name.toLowerCase().startsWith(query.toLowerCase());
+    return !alreadySelected && matchesQuery;
+  });
 
   useEffect(() => {
     const selected = menuRef.current?.querySelector("[data-selected='true']");
@@ -96,7 +115,7 @@ export function SlashCommandMenu({
 
   return (
     <div
-      className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-xl border border-border/50 bg-card/95 shadow-[var(--shadow-float)] backdrop-blur-xl"
+      className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-xl border border-border/50 bg-card/95 shadow-[var(--shadow-float)] backdrop-blur-xl"
       ref={menuRef}
     >
       <div className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/40">
