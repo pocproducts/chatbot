@@ -1,1 +1,8 @@
-export type { Chat, DBMessage, Suggestion, User, Vote, Document } from "../db/schema";
+export type {
+  Chat,
+  DBMessage,
+  Document,
+  Suggestion,
+  User,
+  Vote,
+} from "../db/schema";

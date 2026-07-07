@@ -1,0 +1,12 @@
+# openspec/changes/complete-landing-page/change.yaml
+# Complete Landing Page — Full Optimus Reference Match
+schema: spec-driven
+change: complete-landing-page
+status: tasks
+created: 2026-07-06
+author: gentle-orchestrator
+session_preflight:
+  mode: auto
+  artifact_store: both
+  delivery_strategy: single-pr
+  review_budget_lines: 400

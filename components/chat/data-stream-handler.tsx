@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
-import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
 import type { AgentTask } from "@/hooks/use-agent-sidebar";
+import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
+import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
 import { artifactDefinitions } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
@@ -51,49 +51,54 @@ export function DataStreamHandler() {
           tasks: Array<{ id: string; label: string }>;
         };
 
-        mutate("agent-sidebar", (prev: any) => {
-          const current = prev ?? {
-            isOpen: false,
-            activeAgentId: null,
-            sessions: {},
-          };
+        mutate(
+          "agent-sidebar",
+          (prev: any) => {
+            const current = prev ?? {
+              isOpen: false,
+              activeAgentId: null,
+              sessions: {},
+            };
 
-          const hydratedTasks: AgentTask[] = tasks.map((t) => ({
-            ...t,
-            status: "pending" as const,
-          }));
+            const hydratedTasks: AgentTask[] = tasks.map((t) => ({
+              ...t,
+              status: "pending" as const,
+            }));
 
-          const newSession = {
-            agentId,
-            toolName,
-            profileId,
-            messageId: "",
-            status: "running" as const,
-            tasks: hydratedTasks,
-            startedAt: Date.now(),
-            totalCostCents: 0,
-          };
+            const newSession = {
+              agentId,
+              toolName,
+              profileId,
+              messageId: "",
+              status: "running" as const,
+              tasks: hydratedTasks,
+              startedAt: Date.now(),
+              totalCostCents: 0,
+            };
 
-          return {
-            ...current,
-            isOpen: true,
-            activeAgentId: agentId,
-            sessions: { ...current.sessions, [agentId]: newSession },
-          };
-        }, { revalidate: false });
+            return {
+              ...current,
+              isOpen: true,
+              activeAgentId: agentId,
+              sessions: { ...current.sessions, [agentId]: newSession },
+            };
+          },
+          { revalidate: false }
+        );
 
         continue;
       }
 
       // ── Agent task update ────────────────────────────────────────────────
       if (anyDelta.type === "data-agent-task-update") {
-        const { agentId, taskId, status, durationMs, costCents } = anyDelta.data as {
-          agentId: string;
-          taskId: string;
-          status: "running" | "completed" | "error";
-          durationMs?: number;
-          costCents?: number;
-        };
+        const { agentId, taskId, status, durationMs, costCents } =
+          anyDelta.data as {
+            agentId: string;
+            taskId: string;
+            status: "running" | "completed" | "error";
+            durationMs?: number;
+            costCents?: number;
+          };
 
         updateTask(agentId, taskId, { status, durationMs, costCents });
         continue;
@@ -101,7 +106,10 @@ export function DataStreamHandler() {
 
       // ── Agent session complete ────────────────────────────────────────────
       if (anyDelta.type === "data-agent-session-complete") {
-        const { agentId } = anyDelta.data as { agentId: string; durationMs: number };
+        const { agentId } = anyDelta.data as {
+          agentId: string;
+          durationMs: number;
+        };
 
         updateSession(agentId, {
           status: "completed",
@@ -169,7 +177,16 @@ export function DataStreamHandler() {
         }
       });
     }
-  }, [dataStream, setArtifact, setMetadata, artifact, setDataStream, mutate, updateTask, updateSession]);
+  }, [
+    dataStream,
+    setArtifact,
+    setMetadata,
+    artifact,
+    setDataStream,
+    mutate,
+    updateTask,
+    updateSession,
+  ]);
 
   return null;
 }

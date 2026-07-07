@@ -1,10 +1,12 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { Check, CheckCircle2, Loader2, Send } from "lucide-react";
+import { useState } from "react";
+import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
+import { useArtifact } from "@/hooks/use-artifact";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
-import { useState } from "react";
-import { Check, CheckCircle2, Loader2, Send } from "lucide-react";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import {
@@ -22,16 +24,6 @@ import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
-import { useArtifact } from "@/hooks/use-artifact";
-
 
 const AgenteTrabajandoButton = ({
   toolName,
@@ -42,14 +34,21 @@ const AgenteTrabajandoButton = ({
   toolKey: string;
   messageId: string;
 }) => {
-  const { allSessions, setActiveAgent, open: openAgentSidebar } = useAgentSidebar();
+  const {
+    allSessions,
+    setActiveAgent,
+    open: openAgentSidebar,
+  } = useAgentSidebar();
   const { setArtifact } = useArtifact();
 
   // Find the session that matches this tool (by toolName from the stream)
   // We match by toolName since agentId is only known after the session-start event.
-  const session = allSessions.find(
-    (s) => s.toolName.toLowerCase().replace(/[^a-z]/g, "") === toolName.toLowerCase().replace(/[^a-z]/g, "")
-  ) ?? null;
+  const session =
+    allSessions.find(
+      (s) =>
+        s.toolName.toLowerCase().replace(/[^a-z]/g, "") ===
+        toolName.toLowerCase().replace(/[^a-z]/g, "")
+    ) ?? null;
 
   const isCompleted = session?.status === "completed";
   const isRunning = session?.status === "running";
@@ -67,14 +66,14 @@ const AgenteTrabajandoButton = ({
 
   return (
     <button
-      onClick={handleOpen}
-      type="button"
       className={cn(
         "inline-flex items-center gap-2 my-1.5 px-3 py-1.5 rounded-lg border font-medium text-xs text-left w-fit transition-all duration-300 shadow-sm hover:shadow-md active:scale-[0.98]",
         isCompleted
           ? "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
           : "border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary cursor-pointer"
       )}
+      onClick={handleOpen}
+      type="button"
     >
       {isCompleted ? (
         <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
@@ -82,12 +81,13 @@ const AgenteTrabajandoButton = ({
         <Loader2 className="size-3.5 animate-spin text-primary shrink-0" />
       )}
       <span className={cn("italic", isCompleted && "not-italic font-semibold")}>
-        {isCompleted ? `${toolName} completado ✓` : `Agente trabajando en ${toolName}...`}
+        {isCompleted
+          ? `${toolName} completado ✓`
+          : `Agente trabajando en ${toolName}...`}
       </span>
     </button>
   );
 };
-
 
 const PurePreviewMessage = ({
   addToolApprovalResponse,
@@ -182,9 +182,10 @@ const PurePreviewMessage = ({
     }
 
     if (type === "text") {
-      const RE = /(\[MAIL_INPUT_REPLACEMENT\]|\[INFORME_FISCAL_BUTTON:[A-Za-z0-9+/=]+\]|_(?:Agente trabajando en .*?\.\.\.)_)/g;
+      const RE =
+        /(\[MAIL_INPUT_REPLACEMENT\]|\[INFORME_FISCAL_BUTTON:[A-Za-z0-9+/=]+\]|_(?:Agente trabajando en .*?\.\.\.)_)/g;
       const fragments = part.text.split(RE);
-      
+
       return (
         <MessageContent
           className={cn("text-[13px] leading-[1.65]", {
@@ -196,14 +197,23 @@ const PurePreviewMessage = ({
         >
           {fragments.map((fragment, i) => {
             if (!fragment) return null;
-            
+
             if (fragment === "[MAIL_INPUT_REPLACEMENT]") {
               return <MailInputComponent key={i} />;
-            } else if (fragment.startsWith("[INFORME_FISCAL_BUTTON:")) {
-              const b64 = fragment.replace("[INFORME_FISCAL_BUTTON:", "").replace("]", "");
-              return <InformeFiscalButton key={i} dataEncoded={b64} />;
-            } else if (fragment.startsWith("_Agente trabajando en ") && fragment.endsWith("..._")) {
-              const match = fragment.match(/^_Agente trabajando en (.*?)\.\.\._$/);
+            }
+            if (fragment.startsWith("[INFORME_FISCAL_BUTTON:")) {
+              const b64 = fragment
+                .replace("[INFORME_FISCAL_BUTTON:", "")
+                .replace("]", "");
+              return <InformeFiscalButton dataEncoded={b64} key={i} />;
+            }
+            if (
+              fragment.startsWith("_Agente trabajando en ") &&
+              fragment.endsWith("..._")
+            ) {
+              const match = fragment.match(
+                /^_Agente trabajando en (.*?)\.\.\._$/
+              );
               const toolName = match ? match[1] : "";
               const nameLower = toolName.toLowerCase();
               if (
@@ -218,14 +228,17 @@ const PurePreviewMessage = ({
               return (
                 <AgenteTrabajandoButton
                   key={i}
-                  toolName={toolName}
-                  toolKey={toolKey}
                   messageId={message.id}
+                  toolKey={toolKey}
+                  toolName={toolName}
                 />
               );
-            } else {
-              return <MessageResponse key={i}>{sanitizeText(fragment)}</MessageResponse>;
             }
+            return (
+              <MessageResponse key={i}>
+                {sanitizeText(fragment)}
+              </MessageResponse>
+            );
           })}
         </MessageContent>
       );
@@ -351,7 +364,10 @@ const PurePreviewMessage = ({
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                       {label}
                     </p>
-                    <ToolOutput output={toolPart.output} errorText={undefined} />
+                    <ToolOutput
+                      errorText={undefined}
+                      output={toolPart.output}
+                    />
                   </div>
                 )}
               </ToolContent>
@@ -545,7 +561,9 @@ const MailInputComponent = () => {
         <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white">
           <Check size={14} />
         </div>
-        <p className="text-sm font-medium">¡Reporte enviado con éxito a {email}!</p>
+        <p className="text-sm font-medium">
+          ¡Reporte enviado con éxito a {email}!
+        </p>
       </div>
     );
   }
@@ -553,26 +571,28 @@ const MailInputComponent = () => {
   return (
     <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-border/40 bg-muted/30 p-4 shadow-sm transition-all hover:bg-muted/50">
       <div className="flex items-center gap-2 px-1">
-        <Send size={14} className="text-muted-foreground" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Destinatario del Reporte</span>
+        <Send className="text-muted-foreground" size={14} />
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+          Destinatario del Reporte
+        </span>
       </div>
       <div className="flex gap-2 max-w-sm">
         <input
+          className="h-10 flex-1 rounded-xl border border-border/50 bg-background px-4 text-sm outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-primary/5"
           disabled={status === "sending"}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="ejemplo@fiscal.arca.gob.ar"
           type="email"
           value={email}
-          className="h-10 flex-1 rounded-xl border border-border/50 bg-background px-4 text-sm outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-primary/5"
         />
         <button
+          className="flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
           disabled={status === "sending" || !email.includes("@")}
           onClick={handleSend}
-          className="flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
         >
           {status === "sending" ? (
             <>
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 className="animate-spin" size={14} />
               Enviando...
             </>
           ) : (
@@ -592,7 +612,7 @@ const MailInputComponent = () => {
 
 const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
   const [open, setOpen] = useState(false);
-  let reports: Array<{tool: string, data: any}> = [];
+  let reports: Array<{ tool: string; data: any }> = [];
   try {
     const jsonStr = atob(dataEncoded);
     reports = JSON.parse(jsonStr);
@@ -605,14 +625,24 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
       case "consultaarca":
         return (
           <div className="space-y-4 text-sm text-black">
-            <p>El CUIT <strong>{data.cuit}</strong> pertenece a <strong>{data.denominacion}</strong>, registrado actualmente como <strong>{data.condicionFiscal}</strong>.</p>
+            <p>
+              El CUIT <strong>{data.cuit}</strong> pertenece a{" "}
+              <strong>{data.denominacion}</strong>, registrado actualmente como{" "}
+              <strong>{data.condicionFiscal}</strong>.
+            </p>
             <div>
               <p className="font-semibold mb-1">Obligaciones Impositivas:</p>
               <ul className="list-disc pl-5 space-y-1">
                 {data.obligaciones.map((ob: any, i: number) => (
                   <li key={i}>
-                    <strong>{ob.impuesto}</strong> ({ob.periodicidad}): Estado <em>{ob.estado}</em>
-                    {ob.vencimientoProximo && <span> — Próximo vencimiento el {ob.vencimientoProximo}</span>}
+                    <strong>{ob.impuesto}</strong> ({ob.periodicidad}): Estado{" "}
+                    <em>{ob.estado}</em>
+                    {ob.vencimientoProximo && (
+                      <span>
+                        {" "}
+                        — Próximo vencimiento el {ob.vencimientoProximo}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -622,17 +652,34 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
       case "sistemaregistral":
         return (
           <div className="space-y-4 text-sm text-black">
-            <p>La entidad <strong>{data.razonSocial}</strong> es una <strong>{data.formaJuridica}</strong> inscripta desde <strong>{data.fechaInscripcionAFIP}</strong>.</p>
+            <p>
+              La entidad <strong>{data.razonSocial}</strong> es una{" "}
+              <strong>{data.formaJuridica}</strong> inscripta desde{" "}
+              <strong>{data.fechaInscripcionAFIP}</strong>.
+            </p>
             <div>
               <p className="font-semibold mb-1">Actividades Registradas:</p>
               <ul className="list-disc pl-5 space-y-1">
-                <li><strong>Principal:</strong> {data.actividadPrincipal.descripcion}</li>
+                <li>
+                  <strong>Principal:</strong>{" "}
+                  {data.actividadPrincipal.descripcion}
+                </li>
                 {data.actividadesSecundarias.map((act: any, i: number) => (
-                  <li key={i}><strong>Secundaria:</strong> {act.descripcion}</li>
+                  <li key={i}>
+                    <strong>Secundaria:</strong> {act.descripcion}
+                  </li>
                 ))}
               </ul>
             </div>
-            <p>Su domicilio fiscal verificado se encuentra en <strong>{data.domicilioFiscal.calle} {data.domicilioFiscal.numero}, {data.domicilioFiscal.localidad}, {data.domicilioFiscal.provincia}</strong>.</p>
+            <p>
+              Su domicilio fiscal verificado se encuentra en{" "}
+              <strong>
+                {data.domicilioFiscal.calle} {data.domicilioFiscal.numero},{" "}
+                {data.domicilioFiscal.localidad},{" "}
+                {data.domicilioFiscal.provincia}
+              </strong>
+              .
+            </p>
           </div>
         );
       case "misfacilidades":
@@ -642,29 +689,50 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
             {data.planesActivos.length > 0 ? (
               <ul className="space-y-3">
                 {data.planesActivos.map((plan: any, i: number) => (
-                  <li key={i} className="bg-white p-3 rounded border border-gray-200">
-                    <p className="font-semibold">{plan.regimen} (Plan N° {plan.nroPlan})</p>
-                    <p>El plan se encuentra <strong>{plan.estadoPlan}</strong>. Se ha pagado la cuota {plan.cuotasPagadas} de {plan.cuotasTotales} (${plan.montoCuotaActual.toLocaleString()}).</p>
-                    <p>El próximo vencimiento de cuota es el <strong>{plan.proximoVencimientoCuota}</strong>.</p>
+                  <li
+                    className="bg-white p-3 rounded border border-gray-200"
+                    key={i}
+                  >
+                    <p className="font-semibold">
+                      {plan.regimen} (Plan N° {plan.nroPlan})
+                    </p>
+                    <p>
+                      El plan se encuentra <strong>{plan.estadoPlan}</strong>.
+                      Se ha pagado la cuota {plan.cuotasPagadas} de{" "}
+                      {plan.cuotasTotales} ($
+                      {plan.montoCuotaActual.toLocaleString()}).
+                    </p>
+                    <p>
+                      El próximo vencimiento de cuota es el{" "}
+                      <strong>{plan.proximoVencimientoCuota}</strong>.
+                    </p>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p>No se registran planes de facilidades activos en este momento.</p>
+              <p>
+                No se registran planes de facilidades activos en este momento.
+              </p>
             )}
           </div>
         );
       case "deudavencimientos":
         return (
           <div className="space-y-4 text-sm text-black">
-            <p>El saldo total de deuda registrado es de <strong>${data.saldoTotal.toLocaleString()}</strong>.</p>
+            <p>
+              El saldo total de deuda registrado es de{" "}
+              <strong>${data.saldoTotal.toLocaleString()}</strong>.
+            </p>
             {data.deudasVencidas.length > 0 && (
               <div>
                 <p className="font-semibold mb-1">Deudas ya vencidas:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   {data.deudasVencidas.map((deuda: any, i: number) => (
                     <li key={i}>
-                      {deuda.impuesto} ({deuda.periodo}): <strong>${deuda.total.toLocaleString()}</strong> (Se encuentra <em>{deuda.estadoCobranza}</em> desde {deuda.fechaVencimiento})
+                      {deuda.impuesto} ({deuda.periodo}):{" "}
+                      <strong>${deuda.total.toLocaleString()}</strong> (Se
+                      encuentra <em>{deuda.estadoCobranza}</em> desde{" "}
+                      {deuda.fechaVencimiento})
                     </li>
                   ))}
                 </ul>
@@ -672,11 +740,15 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
             )}
             {data.deudasPendientes.length > 0 && (
               <div>
-                <p className="font-semibold mb-1">Obligaciones pendientes (no vencidas):</p>
+                <p className="font-semibold mb-1">
+                  Obligaciones pendientes (no vencidas):
+                </p>
                 <ul className="list-disc pl-5 space-y-1">
                   {data.deudasPendientes.map((deuda: any, i: number) => (
                     <li key={i}>
-                      {deuda.impuesto} ({deuda.periodo}): <strong>${deuda.total.toLocaleString()}</strong> a vencer el {deuda.fechaVencimiento}
+                      {deuda.impuesto} ({deuda.periodo}):{" "}
+                      <strong>${deuda.total.toLocaleString()}</strong> a vencer
+                      el {deuda.fechaVencimiento}
                     </li>
                   ))}
                 </ul>
@@ -687,22 +759,46 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
       case "rentascordoba":
         return (
           <div className="space-y-4 text-sm text-black">
-            <p>En Rentas de la Provincia de Córdoba, el contribuyente figura bajo el <strong>{data.inscripcionIIBB.tipo}</strong> con estado <strong>{data.inscripcionIIBB.estado}</strong>.</p>
-            <p>La última DDJJ informada corresponde a <strong>{data.declaracionesJuradas.ultimaDeclarada}</strong>, resultando en <strong>{data.declaracionesJuradas.estadoCuenta}</strong> con un saldo a favor de <strong>${data.declaracionesJuradas.saldoAFavor}</strong>.</p>
+            <p>
+              En Rentas de la Provincia de Córdoba, el contribuyente figura bajo
+              el <strong>{data.inscripcionIIBB.tipo}</strong> con estado{" "}
+              <strong>{data.inscripcionIIBB.estado}</strong>.
+            </p>
+            <p>
+              La última DDJJ informada corresponde a{" "}
+              <strong>{data.declaracionesJuradas.ultimaDeclarada}</strong>,
+              resultando en{" "}
+              <strong>{data.declaracionesJuradas.estadoCuenta}</strong> con un
+              saldo a favor de{" "}
+              <strong>${data.declaracionesJuradas.saldoAFavor}</strong>.
+            </p>
             {data.actividades.length > 0 && (
-              <p>La actividad gravada es &quot;{data.actividades[0].descripcion}&quot; a una alícuota del {data.actividades[0].alicuota}.</p>
+              <p>
+                La actividad gravada es &quot;{data.actividades[0].descripcion}
+                &quot; a una alícuota del {data.actividades[0].alicuota}.
+              </p>
             )}
           </div>
         );
       case "calendariovencimientosarca":
         return (
           <div className="space-y-4 text-sm text-black">
-            <p>Detalle de vencimientos para el periodo <strong>{data.periodo}</strong>:</p>
+            <p>
+              Detalle de vencimientos para el periodo{" "}
+              <strong>{data.periodo}</strong>:
+            </p>
             <ul className="space-y-2">
               {data.vencimientos.map((venc: any, i: number) => (
-                <li key={i} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-0 last:pb-0">
-                  <span><strong>{venc.fecha}</strong> — {venc.obligacion}</span>
-                  <span className="text-xs px-2 py-1 rounded bg-gray-100 text-black">{venc.estado}</span>
+                <li
+                  className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-0 last:pb-0"
+                  key={i}
+                >
+                  <span>
+                    <strong>{venc.fecha}</strong> — {venc.obligacion}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded bg-gray-100 text-black">
+                    {venc.estado}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -719,9 +815,9 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
 
   return (
     <div className="mt-4 flex flex-col gap-2">
-      <button 
-        onClick={() => setOpen(!open)}
+      <button
         className="flex w-fit h-10 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-medium text-white transition-all hover:opacity-90 active:scale-95 border border-black"
+        onClick={() => setOpen(!open)}
       >
         📋 {open ? "Ocultar Informe Fiscal" : "Ver Informe Fiscal Completo ..."}
       </button>
@@ -729,11 +825,16 @@ const InformeFiscalButton = ({ dataEncoded }: { dataEncoded: string }) => {
       {open && (
         <div className="mt-2 flex flex-col gap-6 rounded-2xl border border-gray-300 bg-white p-6 shadow-sm overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200">
           <div className="flex items-center justify-between border-b border-gray-300 pb-4">
-            <h3 className="text-xl font-semibold tracking-tight text-black">Informe Consolidado Completo</h3>
+            <h3 className="text-xl font-semibold tracking-tight text-black">
+              Informe Consolidado Completo
+            </h3>
           </div>
           <div className="flex flex-col gap-6 max-h-[600px] overflow-y-auto no-scrollbar pr-2">
             {reports.map((report, idx) => (
-              <div key={idx} className="rounded-2xl border border-gray-300 bg-white p-5 shadow-sm">
+              <div
+                className="rounded-2xl border border-gray-300 bg-white p-5 shadow-sm"
+                key={idx}
+              >
                 <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.15em] text-black border-b border-gray-200 pb-2">
                   {report.tool}
                 </h4>

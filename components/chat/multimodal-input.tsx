@@ -8,19 +8,11 @@ import {
   BrainIcon,
   EyeIcon,
   LockIcon,
-  WrenchIcon,
   UserIcon,
+  WrenchIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useProfiles } from "@/hooks/use-profiles";
 import {
   type ChangeEvent,
   type Dispatch,
@@ -46,6 +38,14 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useProfiles } from "@/hooks/use-profiles";
+import {
   type ChatModel,
   chatModels,
   DEFAULT_CHAT_MODEL,
@@ -53,22 +53,14 @@ import {
 } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import {
-  PromptInput,
-  PromptInputFooter,
-  PromptInputSubmit,
-  PromptInputTextarea,
-  PromptInputTools,
-} from "../ai-elements/prompt-input";
+import { PromptInput } from "../ai-elements/prompt-input";
 import { Button } from "../ui/button";
 import { PaperclipIcon, StopIcon } from "./icons";
-import { PreviewAttachment } from "./preview-attachment";
 import {
   type SlashCommand,
   SlashCommandMenu,
   slashCommands,
 } from "./slash-commands";
-import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 
 function setCookie(name: string, value: string) {
@@ -139,7 +131,7 @@ function PureMultimodalInput({
   const { profiles } = useProfiles();
   const [activeProfileId, setActiveProfileId] = useLocalStorage<string>(
     "active-profile-id",
-    profiles[0]?.id ?? "prof_48x"
+    profiles[0]?.id ?? ""
   );
 
   useEffect(() => {
@@ -170,7 +162,8 @@ function PureMultimodalInput({
   const handleSlashSelect = (cmd: SlashCommand) => {
     setSlashOpen(false);
     const lastSlashIndex = input.lastIndexOf("/");
-    const prefix = lastSlashIndex !== -1 ? input.slice(0, lastSlashIndex) : input;
+    const prefix =
+      lastSlashIndex === -1 ? input : input.slice(0, lastSlashIndex);
     setInput(`${prefix.trim()} /${cmd.name} `);
   };
 
@@ -345,12 +338,21 @@ function PureMultimodalInput({
   }
 
   return (
-    <div className={cn("mx-auto flex w-full max-w-[1020px] flex-col items-center gap-4 px-4", className)}>
+    <div
+      className={cn(
+        "mx-auto flex w-full max-w-[1020px] flex-col items-center gap-4 px-4",
+        className
+      )}
+    >
       <PromptInput
         className="w-full"
         onSubmit={() => {
           const hasSlash = input.includes("/");
-          if (input.length >= 11 && hasSlash && (status === "ready" || status === "error")) {
+          if (
+            input.length >= 11 &&
+            hasSlash &&
+            (status === "ready" || status === "error")
+          ) {
             submitForm();
           }
         }}
@@ -365,19 +367,23 @@ function PureMultimodalInput({
               setInput(value);
 
               const lastSlashIndex = value.lastIndexOf("/");
-              if (lastSlashIndex !== -1) {
+              if (lastSlashIndex === -1) {
+                setSlashOpen(false);
+              } else {
                 const query = value.slice(lastSlashIndex + 1);
                 setSlashQuery(query);
                 setSlashOpen(true);
-              } else {
-                setSlashOpen(false);
               }
             }}
             onKeyDown={(e) => {
               if (slashOpen) {
                 const filtered = slashCommands.filter((cmd) => {
-                  const alreadySelected = input.toLowerCase().includes(cmd.name.toLowerCase());
-                  const matchesQuery = cmd.name.toLowerCase().startsWith(slashQuery.toLowerCase());
+                  const alreadySelected = input
+                    .toLowerCase()
+                    .includes(cmd.name.toLowerCase());
+                  const matchesQuery = cmd.name
+                    .toLowerCase()
+                    .startsWith(slashQuery.toLowerCase());
                   return !alreadySelected && matchesQuery;
                 });
                 if (e.key === "ArrowDown") {
@@ -407,7 +413,11 @@ function PureMultimodalInput({
               if (e.key === "Enter") {
                 e.preventDefault();
                 const hasSlash = input.includes("/");
-                if (input.length >= 11 && hasSlash && (status === "ready" || status === "error")) {
+                if (
+                  input.length >= 11 &&
+                  hasSlash &&
+                  (status === "ready" || status === "error")
+                ) {
                   submitForm();
                 }
               }
@@ -435,7 +445,11 @@ function PureMultimodalInput({
                 : "bg-muted text-muted-foreground/30 cursor-not-allowed"
             )}
             data-testid="send-button"
-            disabled={input.length < 11 || !input.includes("/") || status === "submitted"}
+            disabled={
+              input.length < 11 ||
+              !input.includes("/") ||
+              status === "submitted"
+            }
             onClick={(e) => {
               e.preventDefault();
               submitForm();
@@ -456,26 +470,27 @@ function PureMultimodalInput({
         <UserIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
         <span className="text-xs text-muted-foreground/60">Profile:</span>
         {profiles.length > 0 ? (
-          <Select value={activeProfileId} onValueChange={setActiveProfileId}>
+          <Select onValueChange={setActiveProfileId} value={activeProfileId}>
             <SelectTrigger className="h-7 border-none bg-transparent px-2 text-xs text-muted-foreground hover:text-foreground shadow-none focus:ring-0 gap-1 rounded-lg">
               <SelectValue placeholder="Select profile..." />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id} className="text-xs">
+                <SelectItem className="text-xs" key={p.id} value={p.id}>
                   {p.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs text-muted-foreground/50 italic">No profiles — create one in Settings</span>
+          <span className="text-xs text-muted-foreground/50 italic">
+            No profiles — create one in Settings
+          </span>
         )}
       </div>
     </div>
   );
 }
-
 
 export const MultimodalInput = memo(
   PureMultimodalInput,

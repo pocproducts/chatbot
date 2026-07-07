@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
   CircleDashed,
@@ -9,24 +8,52 @@ import {
   DollarSign,
   ExternalLink,
   Globe,
-  Loader2,
   ListChecks,
+  Loader2,
   RefreshCw,
   Shield,
   X,
 } from "lucide-react";
-import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
 import type { AgentSession, AgentTask } from "@/hooks/use-agent-sidebar";
+import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
+import { cn } from "@/lib/utils";
 
 // ── Tool URL mapping for the embedded browser ─────────────────────────────────
 
-const TOOL_URLS: Record<string, { url: string; label: string; favicon: string }> = {
-  consultaarca:               { url: "https://auth.afip.gob.ar/contribuyente/",          label: "ARCA — Consulta de Obligaciones", favicon: "🏛️" },
-  sistemaregistral:           { url: "https://sdr.afip.gob.ar/",                          label: "ARCA — Sistema Registral",         favicon: "📋" },
-  misfacilidades:             { url: "https://www.afip.gob.ar/mf/",                       label: "ARCA — Mis Facilidades",           favicon: "💳" },
-  deudavencimientos:          { url: "https://www.afip.gob.ar/dv/",                       label: "ARCA — Deuda y Vencimientos",      favicon: "📅" },
-  rentascordoba:              { url: "https://www.rentascordoba.gob.ar/",                  label: "Rentas Córdoba — IIBB",            favicon: "🏢" },
-  calendariovencimientosarca: { url: "https://www.afip.gob.ar/genericos/vencimientos/",   label: "ARCA — Calendario Fiscal",         favicon: "📆" },
+const TOOL_URLS: Record<
+  string,
+  { url: string; label: string; favicon: string }
+> = {
+  consultaarca: {
+    url: "https://auth.afip.gob.ar/contribuyente/",
+    label: "ARCA — Consulta de Obligaciones",
+    favicon: "🏛️",
+  },
+  sistemaregistral: {
+    url: "https://sdr.afip.gob.ar/",
+    label: "ARCA — Sistema Registral",
+    favicon: "📋",
+  },
+  misfacilidades: {
+    url: "https://www.afip.gob.ar/mf/",
+    label: "ARCA — Mis Facilidades",
+    favicon: "💳",
+  },
+  deudavencimientos: {
+    url: "https://www.afip.gob.ar/dv/",
+    label: "ARCA — Deuda y Vencimientos",
+    favicon: "📅",
+  },
+  rentascordoba: {
+    url: "https://www.rentascordoba.gob.ar/",
+    label: "Rentas Córdoba — IIBB",
+    favicon: "🏢",
+  },
+  calendariovencimientosarca: {
+    url: "https://www.afip.gob.ar/genericos/vencimientos/",
+    label: "ARCA — Calendario Fiscal",
+    favicon: "📆",
+  },
 };
 
 function getToolMeta(toolName: string) {
@@ -75,7 +102,12 @@ function EmbeddedBrowser({ session }: { session: AgentSession }) {
         <div className="flex items-center gap-1.5 shrink-0">
           <div className="size-2.5 rounded-full bg-destructive/50" />
           <div className="size-2.5 rounded-full bg-yellow-400/50" />
-          <div className={cn("size-2.5 rounded-full transition-colors duration-500", isCompleted ? "bg-emerald-500" : "bg-muted-foreground/20")} />
+          <div
+            className={cn(
+              "size-2.5 rounded-full transition-colors duration-500",
+              isCompleted ? "bg-emerald-500" : "bg-muted-foreground/20"
+            )}
+          />
         </div>
 
         {/* URL bar */}
@@ -88,9 +120,9 @@ function EmbeddedBrowser({ session }: { session: AgentSession }) {
 
         {/* Reload / spinner */}
         <button
-          type="button"
           aria-label="Reload"
           className="shrink-0 flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          type="button"
         >
           {isRunning ? (
             <Loader2 className="size-3 animate-spin" />
@@ -100,10 +132,10 @@ function EmbeddedBrowser({ session }: { session: AgentSession }) {
         </button>
 
         <button
-          type="button"
           aria-label="Open in new tab"
           className="shrink-0 flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
           onClick={() => window.open(meta.url, "_blank")}
+          type="button"
         >
           <ExternalLink className="size-3" />
         </button>
@@ -159,7 +191,9 @@ function EmbeddedBrowser({ session }: { session: AgentSession }) {
         {session.status === "idle" && (
           <div className="flex flex-col items-center justify-center gap-2 p-6 h-full">
             <Globe className="size-6 text-muted-foreground/30" />
-            <p className="text-[10px] text-muted-foreground/50">Esperando inicio...</p>
+            <p className="text-[10px] text-muted-foreground/50">
+              Esperando inicio...
+            </p>
           </div>
         )}
 
@@ -189,9 +223,7 @@ function TaskRow({ task }: { task: AgentTask }) {
         {task.status === "pending" && (
           <CircleDashed className="size-3.5 text-muted-foreground/40" />
         )}
-        {task.status === "error" && (
-          <X className="size-3.5 text-destructive" />
-        )}
+        {task.status === "error" && <X className="size-3.5 text-destructive" />}
       </span>
 
       <span
@@ -258,8 +290,7 @@ function SessionPanel({ session }: { session: AgentSession }) {
       <div
         className={cn(
           "flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium border",
-          isRunning &&
-            "border-primary/20 bg-primary/5 text-primary",
+          isRunning && "border-primary/20 bg-primary/5 text-primary",
           isCompleted &&
             "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
           session.status === "idle" &&
@@ -272,7 +303,8 @@ function SessionPanel({ session }: { session: AgentSession }) {
           <CircleDashed className="size-3.5 shrink-0" />
         )}
         <span>
-          {isRunning && `Running — ${completedTasks} task${completedTasks !== 1 ? "s" : ""} done`}
+          {isRunning &&
+            `Running — ${completedTasks} task${completedTasks === 1 ? "" : "s"} done`}
           {isCompleted && `Completed — ${totalTasks} tasks`}
           {session.status === "idle" && "Waiting to start"}
         </span>
@@ -322,13 +354,8 @@ function SessionPanel({ session }: { session: AgentSession }) {
 // ── AgentSidebar ───────────────────────────────────────────────────────────────
 
 export function AgentSidebar() {
-  const {
-    activeSession,
-    allSessions,
-    close,
-    setActiveAgent,
-    activeAgentId,
-  } = useAgentSidebar();
+  const { activeSession, allSessions, close, setActiveAgent, activeAgentId } =
+    useAgentSidebar();
 
   return (
     <div className="flex h-full w-[400px] shrink-0 flex-col border-l border-border/40 bg-sidebar">
@@ -358,15 +385,15 @@ export function AgentSidebar() {
         <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border/40 p-2 no-scrollbar">
           {allSessions.map((session) => (
             <button
-              key={session.agentId}
-              type="button"
-              onClick={() => setActiveAgent(session.agentId)}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors whitespace-nowrap",
                 session.agentId === activeAgentId
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
+              key={session.agentId}
+              onClick={() => setActiveAgent(session.agentId)}
+              type="button"
             >
               {session.status === "running" && (
                 <Loader2 className="size-3 animate-spin" />
@@ -374,9 +401,7 @@ export function AgentSidebar() {
               {session.status === "completed" && (
                 <CheckCircle2 className="size-3 text-emerald-500" />
               )}
-              {session.status === "idle" && (
-                <CircleDashed className="size-3" />
-              )}
+              {session.status === "idle" && <CircleDashed className="size-3" />}
               {session.toolName}
             </button>
           ))}
@@ -396,7 +421,9 @@ export function AgentSidebar() {
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Message ·{" "}
                   <span className="font-mono">
-                    {activeSession.messageId.slice(0, 8) || activeSession.agentId.slice(0, 8)}...
+                    {activeSession.messageId.slice(0, 8) ||
+                      activeSession.agentId.slice(0, 8)}
+                    ...
                   </span>
                 </p>
               )}

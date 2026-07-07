@@ -1,5 +1,4 @@
 import { BarChart } from "lucide-react";
-import React from "react";
 
 export default function AnalyticsOverviewPage() {
   return (
@@ -9,12 +8,18 @@ export default function AnalyticsOverviewPage() {
           <BarChart className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">Overview</h1>
-          <p className="text-sm text-muted-foreground">General analytics and execution metrics.</p>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+            Overview
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            General analytics and execution metrics.
+          </p>
         </div>
       </div>
       <div className="flex-1 p-6">
-        <div className="text-muted-foreground text-sm">Overview charts and metrics will go here.</div>
+        <div className="text-muted-foreground text-sm">
+          Overview charts and metrics will go here.
+        </div>
       </div>
     </div>
   );

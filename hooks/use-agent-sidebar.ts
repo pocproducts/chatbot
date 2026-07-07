@@ -1,9 +1,12 @@
 "use client";
 
-import type { AgentSession, AgentTask, TaskStatus } from "@/lib/ai/tools/agent-execution";
-import { buildSubtasksForTool, generateAgentId } from "@/lib/ai/tools/agent-execution";
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo } from "react";
 import useSWR from "swr";
+import type { AgentSession, AgentTask } from "@/lib/ai/tools/agent-execution";
+import {
+  buildSubtasksForTool,
+  generateAgentId,
+} from "@/lib/ai/tools/agent-execution";
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -31,29 +34,6 @@ export function useAgentSidebar() {
     null,
     { fallbackData: initialAgentSidebarState }
   );
-
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("agent-sessions-store");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setLocalState({ ...parsed, isOpen: false });
-        } catch (e) {
-          console.error("Failed to restore agent sessions", e);
-        }
-      }
-      setIsInitialized(true);
-    }
-  }, [setLocalState]);
-
-  useEffect(() => {
-    if (isInitialized && localState) {
-      localStorage.setItem("agent-sessions-store", JSON.stringify(localState));
-    }
-  }, [localState, isInitialized]);
 
   const state = useMemo(
     () => localState ?? initialAgentSidebarState,
@@ -140,9 +120,7 @@ export function useAgentSidebar() {
   const updateSession = useCallback(
     (
       agentId: string,
-      patch: Partial<
-        Pick<AgentSession, "status" | "startedAt" | "completedAt">
-      >
+      patch: Partial<Pick<AgentSession, "status" | "startedAt" | "completedAt">>
     ) => {
       setLocalState((prev) => {
         const current = prev ?? initialAgentSidebarState;
@@ -173,7 +151,7 @@ export function useAgentSidebar() {
   // ── Derived helpers ───────────────────────────────────────────────────────
 
   const activeSession = state.activeAgentId
-    ? state.sessions[state.activeAgentId] ?? null
+    ? (state.sessions[state.activeAgentId] ?? null)
     : null;
 
   const allSessions = Object.values(state.sessions);

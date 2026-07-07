@@ -138,12 +138,16 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
             })
           );
 
-        let activeProfileId = "prof_48x";
+        let activeProfileId: string | null = null;
         if (typeof window !== "undefined") {
           try {
-            const rawStoredProfileId = localStorage.getItem("active-profile-id");
+            const rawStoredProfileId =
+              localStorage.getItem("active-profile-id");
             if (rawStoredProfileId) {
-              activeProfileId = JSON.parse(rawStoredProfileId);
+              const parsed = JSON.parse(rawStoredProfileId);
+              if (typeof parsed === "string" && parsed.length > 0) {
+                activeProfileId = parsed;
+              }
             }
           } catch (_) {}
         }

@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useActiveChat } from "@/hooks/use-active-chat";
+import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
 import {
   initialArtifactData,
   useArtifact,
@@ -19,12 +20,10 @@ import {
 } from "@/hooks/use-artifact";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Artifact } from "./artifact";
 import { AgentSidebar } from "./agent-sidebar";
-import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
+import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { DataStreamHandler } from "./data-stream-handler";
-import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
 
@@ -56,7 +55,8 @@ export function ChatShell() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
-  const { isOpen: isAgentSidebarOpen, close: closeAgentSidebar } = useAgentSidebar();
+  const { isOpen: isAgentSidebarOpen, close: closeAgentSidebar } =
+    useAgentSidebar();
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
@@ -85,7 +85,11 @@ export function ChatShell() {
         <div
           className={cn(
             "flex min-w-0 flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isArtifactVisible ? "w-[40%]" : isAgentSidebarOpen ? "w-[60%]" : "w-full"
+            isArtifactVisible
+              ? "w-[40%]"
+              : isAgentSidebarOpen
+                ? "w-[60%]"
+                : "w-full"
           )}
         >
           <ChatHeader
@@ -111,8 +115,8 @@ export function ChatShell() {
                 setEditingMessage(msg);
               }}
               regenerate={regenerate}
-              sendMessage={sendMessage}
               selectedModelId={currentModelId}
+              sendMessage={sendMessage}
               setMessages={setMessages}
               status={status}
               votes={votes}
@@ -120,20 +124,20 @@ export function ChatShell() {
 
             {messages.length > 0 && (
               <MultimodalInput
+                attachments={attachments}
                 chatId={chatId}
                 input={input}
+                isLoading={isLoading}
+                messages={messages}
+                onModelChange={setCurrentModelId}
+                selectedModelId={currentModelId}
+                selectedVisibilityType={visibilityType}
+                sendMessage={sendMessage}
+                setAttachments={setAttachments}
                 setInput={setInput}
+                setMessages={setMessages}
                 status={status}
                 stop={stop}
-                attachments={attachments}
-                setAttachments={setAttachments}
-                messages={messages}
-                setMessages={setMessages}
-                sendMessage={sendMessage}
-                selectedModelId={currentModelId}
-                onModelChange={setCurrentModelId}
-                isLoading={isLoading}
-                selectedVisibilityType={visibilityType}
               />
             )}
           </div>
@@ -158,9 +162,7 @@ export function ChatShell() {
           votes={votes}
         />
 
-        {isAgentSidebarOpen && !isArtifactVisible && (
-          <AgentSidebar />
-        )}
+        {isAgentSidebarOpen && !isArtifactVisible && <AgentSidebar />}
       </div>
 
       <DataStreamHandler />

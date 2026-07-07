@@ -1,10 +1,9 @@
 "use client";
 
+import { Activity, Clock, Cpu, Tag, Target, UserIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useAgentSidebar } from "@/hooks/use-agent-sidebar";
 import { useProfiles } from "@/hooks/use-profiles";
-import { Clock, Activity, Tag, Cpu, Target, UserIcon } from "lucide-react";
-import React from "react";
-import { Badge } from "@/components/ui/badge";
 
 export default function AgentSessionsPage() {
   const { allSessions } = useAgentSidebar();
@@ -22,15 +21,19 @@ export default function AgentSessionsPage() {
   };
 
   // Helper to get formatted last task or current task
-  const getLastTaskLabel = (tasks: Array<{ label: string; status: string }>) => {
+  const getLastTaskLabel = (
+    tasks: Array<{ label: string; status: string }>
+  ) => {
     if (!tasks || tasks.length === 0) return "Initializing";
-    
+
     // Find first running task
     const running = tasks.find((t) => t.status === "running");
     if (running) return running.label;
 
     // Else find the last completed task
-    const completed = [...tasks].reverse().find((t) => t.status === "completed");
+    const completed = [...tasks]
+      .reverse()
+      .find((t) => t.status === "completed");
     if (completed) return completed.label;
 
     return tasks[0].label;
@@ -43,8 +46,12 @@ export default function AgentSessionsPage() {
           <Activity className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">Agent Sessions</h1>
-          <p className="text-sm text-muted-foreground">Monitor and audit logs of your active and past agent executions.</p>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+            Agent Sessions
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Monitor and audit logs of your active and past agent executions.
+          </p>
         </div>
       </div>
 
@@ -54,56 +61,87 @@ export default function AgentSessionsPage() {
             <thead className="bg-muted/30 text-muted-foreground">
               <tr>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><Target className="size-4 shrink-0" /> Goal</div>
+                  <div className="flex items-center gap-1.5">
+                    <Target className="size-4 shrink-0" /> Goal
+                  </div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><Tag className="size-4 shrink-0" /> Session ID</div>
+                  <div className="flex items-center gap-1.5">
+                    <Tag className="size-4 shrink-0" /> Session ID
+                  </div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><UserIcon className="size-4 shrink-0" /> Profile ID</div>
+                  <div className="flex items-center gap-1.5">
+                    <UserIcon className="size-4 shrink-0" /> Profile ID
+                  </div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><Clock className="size-4 shrink-0" /> Started At</div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="size-4 shrink-0" /> Started At
+                  </div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><Activity className="size-4 shrink-0" /> Duration</div>
+                  <div className="flex items-center gap-1.5">
+                    <Activity className="size-4 shrink-0" /> Duration
+                  </div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><Activity className="size-4 shrink-0" /> Cost</div>
+                  <div className="flex items-center gap-1.5">
+                    <Activity className="size-4 shrink-0" /> Cost
+                  </div>
                 </th>
                 <th className="px-5 py-3.5 font-medium">
-                  <div className="flex items-center gap-1.5"><Cpu className="size-4 shrink-0" /> Status / Last Task</div>
+                  <div className="flex items-center gap-1.5">
+                    <Cpu className="size-4 shrink-0" /> Status / Last Task
+                  </div>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
               {sortedSessions.map((s, i) => {
                 const totalCostUsd = s.totalCostCents / 100;
-                const duration = s.startedAt && s.completedAt 
-                  ? `${((s.completedAt - s.startedAt) / 1000).toFixed(1)}s`
-                  : s.startedAt 
-                    ? "Running..." 
-                    : "—";
+                const duration =
+                  s.startedAt && s.completedAt
+                    ? `${((s.completedAt - s.startedAt) / 1000).toFixed(1)}s`
+                    : s.startedAt
+                      ? "Running..."
+                      : "—";
 
-                const startedString = s.startedAt 
+                const startedString = s.startedAt
                   ? new Date(s.startedAt).toLocaleString()
                   : "—";
 
                 return (
-                  <tr key={s.agentId ?? i} className="hover:bg-muted/10 transition-colors">
+                  <tr
+                    className="hover:bg-muted/10 transition-colors"
+                    key={s.agentId ?? i}
+                  >
                     <td className="px-5 py-4 text-foreground font-medium flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${s.status === "running" ? "bg-amber-400 animate-pulse" : s.status === "completed" ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+                      <span
+                        className={`h-2 w-2 rounded-full ${s.status === "running" ? "bg-amber-400 animate-pulse" : s.status === "completed" ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
+                      />
                       Ejecutar {s.toolName}
                     </td>
-                    <td className="px-5 py-4 font-mono text-xs text-muted-foreground">{s.agentId}</td>
+                    <td className="px-5 py-4 font-mono text-xs text-muted-foreground">
+                      {s.agentId}
+                    </td>
                     <td className="px-5 py-4">
-                      <Badge variant="outline" className="py-0.5 px-2 font-medium text-xs border-muted-foreground/20 bg-muted/40">
+                      <Badge
+                        className="py-0.5 px-2 font-medium text-xs border-muted-foreground/20 bg-muted/40"
+                        variant="outline"
+                      >
                         {getProfileName(s.profileId)}
                       </Badge>
                     </td>
-                    <td className="px-5 py-4 text-muted-foreground text-xs">{startedString}</td>
-                    <td className="px-5 py-4 text-muted-foreground text-xs font-mono">{duration}</td>
-                    <td className="px-5 py-4 text-emerald-500 font-mono font-medium">${totalCostUsd.toFixed(3)}</td>
+                    <td className="px-5 py-4 text-muted-foreground text-xs">
+                      {startedString}
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground text-xs font-mono">
+                      {duration}
+                    </td>
+                    <td className="px-5 py-4 text-emerald-500 font-mono font-medium">
+                      ${totalCostUsd.toFixed(3)}
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-foreground font-medium text-xs">
@@ -121,7 +159,8 @@ export default function AgentSessionsPage() {
           </table>
           {sortedSessions.length === 0 && (
             <div className="p-12 text-center text-muted-foreground italic bg-muted/5">
-              No agent sessions captured yet. Execute a fiscal report first to view logs here.
+              No agent sessions captured yet. Execute a fiscal report first to
+              view logs here.
             </div>
           )}
         </div>

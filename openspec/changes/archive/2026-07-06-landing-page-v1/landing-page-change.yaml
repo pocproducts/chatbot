@@ -1,0 +1,12 @@
+# openspec/changes/landing-page-change.yaml
+# Landing Page for Chatbot — Change Manifest
+schema: spec-driven
+change: landing-page
+status: proposed
+created: 2026-07-06
+author: gentle-orchestrator
+session_preflight:
+  mode: auto
+  artifact_store: both
+  delivery_strategy: single-pr
+  review_budget_lines: 400

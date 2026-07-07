@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { ChatShell } from "@/components/chat/shell";
+import { ActiveChatProvider } from "@/hooks/use-active-chat";
 
 export function ChatLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

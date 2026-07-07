@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 import useSWR from "swr";
 
 export interface Profile {
@@ -11,53 +11,12 @@ export interface Profile {
   isAuthenticated?: boolean;
 }
 
-const DEFAULT_PROFILES: Profile[] = [
-  {
-    id: "prof_48x",
-    name: "Default Taxpayer Profile",
-    createdAt: "2026-07-06",
-    cookiesDomains: ["arca.gob.ar", "rentascordoba.gob.ar"],
-    isAuthenticated: true,
-  },
-  {
-    id: "prof_mj2",
-    name: "Alternative Corp Profile",
-    createdAt: "2026-07-05",
-    cookiesDomains: ["arca.gob.ar"],
-    isAuthenticated: false,
-  },
-];
-
 export function useProfiles() {
   const { data: profiles, mutate: setProfiles } = useSWR<Profile[]>(
     "execution-profiles",
     null,
-    { fallbackData: DEFAULT_PROFILES }
+    { fallbackData: [] }
   );
-
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("profiles-store");
-      if (saved) {
-        try {
-          setProfiles(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to load profiles", e);
-        }
-      }
-      setIsInitialized(true);
-    }
-  }, [setProfiles]);
-
-  // Sync to localStorage
-  useEffect(() => {
-    if (isInitialized && profiles) {
-      localStorage.setItem("profiles-store", JSON.stringify(profiles));
-    }
-  }, [profiles, isInitialized]);
 
   const addProfile = useCallback(
     (name: string, domains: string[] = []) => {
@@ -70,7 +29,7 @@ export function useProfiles() {
       };
 
       setProfiles((prev) => {
-        const current = prev ?? DEFAULT_PROFILES;
+        const current = prev ?? [];
         return [...current, newProfile];
       }, false);
 
@@ -82,7 +41,7 @@ export function useProfiles() {
   const updateProfileName = useCallback(
     (id: string, newName: string) => {
       setProfiles((prev) => {
-        const current = prev ?? DEFAULT_PROFILES;
+        const current = prev ?? [];
         return current.map((p) => (p.id === id ? { ...p, name: newName } : p));
       }, false);
     },
@@ -92,7 +51,7 @@ export function useProfiles() {
   const deleteProfile = useCallback(
     (id: string) => {
       setProfiles((prev) => {
-        const current = prev ?? DEFAULT_PROFILES;
+        const current = prev ?? [];
         return current.filter((p) => p.id !== id);
       }, false);
     },
@@ -102,7 +61,7 @@ export function useProfiles() {
   const setProfileAuth = useCallback(
     (id: string, isAuthenticated: boolean) => {
       setProfiles((prev) => {
-        const current = prev ?? DEFAULT_PROFILES;
+        const current = prev ?? [];
         return current.map((p) =>
           p.id === id ? { ...p, isAuthenticated } : p
         );
@@ -111,11 +70,14 @@ export function useProfiles() {
     [setProfiles]
   );
 
-  return {
-    profiles: profiles ?? DEFAULT_PROFILES,
-    addProfile,
-    updateProfileName,
-    deleteProfile,
-    setProfileAuth,
-  };
+  return useMemo(
+    () => ({
+      profiles: profiles ?? [],
+      addProfile,
+      updateProfileName,
+      deleteProfile,
+      setProfileAuth,
+    }),
+    [profiles, addProfile, updateProfileName, deleteProfile, setProfileAuth]
+  );
 }

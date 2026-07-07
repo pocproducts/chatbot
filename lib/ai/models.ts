@@ -1,17 +1,17 @@
 import {
-  DEFAULT_CHAT_MODEL,
-  titleModel,
-  type ModelCapabilities,
   type ChatModel,
   chatModels,
+  DEFAULT_CHAT_MODEL,
+  type ModelCapabilities,
+  titleModel,
 } from "./models-config";
 
 export {
-  DEFAULT_CHAT_MODEL,
-  titleModel,
-  chatModels,
-  type ModelCapabilities,
   type ChatModel,
+  chatModels,
+  DEFAULT_CHAT_MODEL,
+  type ModelCapabilities,
+  titleModel,
 };
 
 export async function getCapabilities(): Promise<
@@ -99,4 +99,3 @@ export async function getAllGatewayModels(): Promise<
     return [];
   }
 }
-

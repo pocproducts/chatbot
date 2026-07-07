@@ -9,7 +9,6 @@ import {
   Handshake,
   Mail,
   MapPin,
-  Trash2,
   Zap,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
@@ -97,7 +96,9 @@ export function SlashCommandMenu({
 }: SlashCommandMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const filtered = slashCommands.filter((cmd) => {
-    const alreadySelected = context.toLowerCase().includes(cmd.name.toLowerCase());
+    const alreadySelected = context
+      .toLowerCase()
+      .includes(cmd.name.toLowerCase());
     const matchesQuery = cmd.name.toLowerCase().startsWith(query.toLowerCase());
     return !alreadySelected && matchesQuery;
   });

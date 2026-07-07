@@ -49,8 +49,6 @@ function PureChatHeader({
           selectedVisibilityType={selectedVisibilityType}
         />
       )}
-
-
     </header>
   );
 }

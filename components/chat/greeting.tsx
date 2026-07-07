@@ -1,5 +1,5 @@
-import { useActiveChat } from "@/hooks/use-active-chat";
 import { motion } from "framer-motion";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { MultimodalInput } from "./multimodal-input";
 
 export const Greeting = () => {
@@ -34,7 +34,8 @@ export const Greeting = () => {
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.5, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        Detalles de impuestos, vencimientos, deudas, planes de pago, registro tributario, IIBB Cordoba
+        Detalles de impuestos, vencimientos, deudas, planes de pago, registro
+        tributario, IIBB Cordoba
       </motion.div>
 
       <motion.div

@@ -27,7 +27,8 @@ export function Preview() {
             Genera un Reporte Fiscal
           </h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Detalles de impuestos, vencimientos, deudas, planes de pago, registro tributario, IIBB Cordoba
+            Detalles de impuestos, vencimientos, deudas, planes de pago,
+            registro tributario, IIBB Cordoba
           </p>
         </div>
 

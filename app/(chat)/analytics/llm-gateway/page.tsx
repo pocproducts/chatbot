@@ -1,5 +1,4 @@
 import { Server } from "lucide-react";
-import React from "react";
 
 export default function LLMGatewayPage() {
   return (
@@ -9,12 +8,18 @@ export default function LLMGatewayPage() {
           <Server className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">LLM Gateway</h1>
-          <p className="text-sm text-muted-foreground">Manage and observe your AI model connections.</p>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+            LLM Gateway
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage and observe your AI model connections.
+          </p>
         </div>
       </div>
       <div className="flex-1 p-6">
-        <div className="text-muted-foreground text-sm">LLM Gateway configuration and usage routing will go here.</div>
+        <div className="text-muted-foreground text-sm">
+          LLM Gateway configuration and usage routing will go here.
+        </div>
       </div>
     </div>
   );
